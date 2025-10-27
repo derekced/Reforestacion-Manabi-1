@@ -29,11 +29,6 @@ import {
 
 // Datos para Reforesta Manabí
 const data = {
-  user: {
-    name: "Emilia Torres",
-    email: "emilia.torres@reforesta.ec",
-    avatar: "/avatars/user.jpg",
-  },
   navMain: [
     {
       title: "Inicio",
@@ -66,16 +61,71 @@ const data = {
       url: "#configuracion",
       icon: Settings,
     },
+    {
+      title: "Acceso",
+      url: "/login",
+      icon: LogOut,
+    },
+    {
+      title: "Registro",
+      url: "/register",
+      icon: Users,
+    },
   ],
 };
 
 export function AppSidebar({ ...props }) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
+  // `user` is null when no authenticated user exists
+  const [user, setUser] = React.useState(null);
 
   React.useEffect(() => {
     setMounted(true);
+    try {
+      const raw = localStorage.getItem("authUser");
+      if (raw) setUser(JSON.parse(raw));
+      else setUser(null);
+    } catch (e) {
+      // ignore
+      setUser(null);
+    }
+    const onAuthChange = () => {
+      try {
+        const raw = localStorage.getItem("authUser");
+        if (raw) setUser(JSON.parse(raw));
+        else
+          setUser({
+            name: "Emilia Torres",
+            email: "emilia.torres@reforesta.ec",
+            avatar: "/avatars/user.jpg",
+          });
+      } catch (e) {
+        // ignore
+      }
+    };
+    window.addEventListener("authChange", onAuthChange);
+    return () => window.removeEventListener("authChange", onAuthChange);
   }, []);
+
+  // Reorder nav items when user has special access (accesoPRIN)
+  const navItems = React.useMemo(() => {
+    const items = [...data.navMain];
+    try {
+      const hasAccess =
+        user && (user.access === "accesoPRIN" || (user.roles || []).includes("accesoPRIN"));
+      if (hasAccess) {
+        const idx = items.findIndex((i) => i.title === "Acceso");
+        if (idx > -1) {
+          const [it] = items.splice(idx, 1);
+          items.unshift(it);
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    return items;
+  }, [user]);
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -83,7 +133,7 @@ export function AppSidebar({ ...props }) {
       <SidebarContent className="bg-forest-dark dark:bg-gray-900 overflow-x-hidden">
         <div className="px-2 py-2">
           <SidebarMenu className="space-y-1">
-            {data.navMain.map((item) => (
+            {navItems.map((item) => (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
                   asChild
@@ -156,8 +206,20 @@ export function AppSidebar({ ...props }) {
           </SidebarMenu>
         </div>
 
-        {/* Usuario */}
-        <NavUser user={data.user} />
+        {/* Usuario: mostrar solo si hay sesión iniciada */}
+        {user ? (
+          <NavUser user={user} />
+        ) : (
+          <div className="px-2">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className="w-full text-forest-lightest/85 hover:bg-white/10 hover:text-white dark:text-gray-300">
+                  <a href="/login" className="w-full text-left">Acceder</a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </div>
+        )}
       </SidebarFooter>
 
       <SidebarRail />

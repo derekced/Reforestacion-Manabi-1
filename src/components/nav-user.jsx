@@ -8,6 +8,7 @@ import {
   LogOut,
   Sparkles,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -28,6 +29,19 @@ import {
 
 export function NavUser({ user }) {
   const { isMobile } = useSidebar();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem("authUser");
+    } catch (e) {}
+    // notificar cambios de auth a otros listeners en la página
+    try {
+      window.dispatchEvent(new Event("authChange"));
+    } catch (e) {}
+    // redirigir a /login
+    router.push("/login");
+  };
 
   return (
     <SidebarMenu>
@@ -102,7 +116,10 @@ export function NavUser({ user }) {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-700" />
-            <DropdownMenuItem className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 focus:bg-red-50 dark:focus:bg-red-950/20">
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 focus:bg-red-50 dark:focus:bg-red-950/20"
+            >
               <LogOut />
               Cerrar Sesión
             </DropdownMenuItem>

@@ -59,10 +59,11 @@
     --sidebar-border: hsl(240 3.7% 15.9%);
     --sidebar-ring: hsl(142 71% 45%);
 
-    /* Colores base del tema oscuro */
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
+  /* Colores base del tema oscuro */
+  --background: 235 10% 5%; /* fondo de página muy oscuro (azulado) */
+  --foreground: 0 0% 98%;
+  /* tarjeta ligeramente azulada en lugar de negro puro */
+  --card: 220 18% 12%;
     --card-foreground: 0 0% 98%;
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;

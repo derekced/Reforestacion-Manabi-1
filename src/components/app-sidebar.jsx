@@ -94,12 +94,7 @@ export function AppSidebar({ ...props }) {
       try {
         const raw = localStorage.getItem("authUser");
         if (raw) setUser(JSON.parse(raw));
-        else
-          setUser({
-            name: "Emilia Torres",
-            email: "emilia.torres@reforesta.ec",
-            avatar: "/avatars/user.jpg",
-          });
+        else setUser(null);
       } catch (e) {
         // ignore
       }
@@ -108,10 +103,27 @@ export function AppSidebar({ ...props }) {
     return () => window.removeEventListener("authChange", onAuthChange);
   }, []);
 
-  // Reorder nav items when user has special access (accesoPRIN)
+  // Filter and reorder nav items based on authentication and access
   const navItems = React.useMemo(() => {
     const items = [...data.navMain];
     try {
+      // If user is authenticated, remove login/register links and add profile
+      if (user) {
+        const filteredItems = items.filter(item => 
+          !['Acceso', 'Registro'].includes(item.title)
+        );
+        return [
+          ...filteredItems,
+          {
+            title: "Mi Perfil",
+            url: "/profile",
+            icon: Users,
+            isActive: false,
+          }
+        ];
+      }
+
+      // If user has special access, reorder access link
       const hasAccess =
         user && (user.access === "accesoPRIN" || (user.roles || []).includes("accesoPRIN"));
       if (hasAccess) {

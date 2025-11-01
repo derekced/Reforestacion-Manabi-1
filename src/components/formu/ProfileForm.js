@@ -10,6 +10,10 @@ export default function ProfileForm() {
     email: "",
     password: "",
     newPassword: "",
+    // campos adicionales para organizadores
+    role: "user",
+    organizationName: "",
+    organizationWebsite: "",
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -27,6 +31,9 @@ export default function ProfileForm() {
         ...f,
         nombre: user.name || "",
         email: user.email || "",
+        role: user.role || "user",
+        organizationName: user.organizationName || "",
+        organizationWebsite: user.organizationWebsite || "",
       }));
     } catch (e) {
       router.push("/login");
@@ -69,8 +76,22 @@ export default function ProfileForm() {
         name: form.nombre,
         email: form.email,
         avatar: "/avatars/user.jpg", // mantener avatar existente o usar uno por defecto
+        role: form.role || 'user',
+        organizationName: form.organizationName || undefined,
+        organizationWebsite: form.organizationWebsite || undefined,
       };
       storage.setItem("authUser", JSON.stringify(updatedUser));
+      // También persistir en la lista global de usuarios si existe
+      try {
+        const usuarios = JSON.parse(localStorage.getItem('usuarios') || '[]');
+        const idx = usuarios.findIndex(u => u.email === form.email);
+        if (idx > -1) {
+          usuarios[idx] = { ...usuarios[idx], nombre: form.nombre, role: form.role, organizationName: form.organizationName, organizationWebsite: form.organizationWebsite };
+        } else {
+          usuarios.push({ nombre: form.nombre, email: form.email, role: form.role, organizationName: form.organizationName, organizationWebsite: form.organizationWebsite });
+        }
+        localStorage.setItem('usuarios', JSON.stringify(usuarios));
+      } catch(e) {}
       
       setSuccess("¡Perfil actualizado correctamente!");
       if (form.newPassword) {
@@ -122,6 +143,41 @@ export default function ProfileForm() {
             {!isEmailValid && form.email && <span className="text-red-500">✕ Email inválido</span>}
           </div>
         </label>
+
+        {/* Mostrar rol (solo lectura) */}
+        <div className="mb-3">
+          <span className="text-sm font-medium text-foreground">Rol</span>
+          <div className="mt-1 text-sm text-gray-700 dark:text-gray-300">{form.role}</div>
+        </div>
+
+        {/* Campos extra para organizadores */}
+        {form.role === 'organizer' && (
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h3 className="text-sm font-medium mb-3">Información de organización</h3>
+            <label className="block mb-3">
+              <span className="text-sm font-medium text-foreground">Nombre de la organización</span>
+              <input
+                name="organizationName"
+                type="text"
+                placeholder="Nombre de la organización"
+                value={form.organizationName}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded border px-3 py-2 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </label>
+            <label className="block mb-3">
+              <span className="text-sm font-medium text-foreground">Sitio web</span>
+              <input
+                name="organizationWebsite"
+                type="url"
+                placeholder="https://..."
+                value={form.organizationWebsite}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded border px-3 py-2 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </label>
+          </div>
+        )}
 
         <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
           <h3 className="text-sm font-medium mb-3">Cambiar contraseña (opcional)</h3>

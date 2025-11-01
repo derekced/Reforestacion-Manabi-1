@@ -25,14 +25,53 @@ export default function LoginForm() {
   const [attempts, setAttempts] = useState(0);
   const [lockUntil, setLockUntil] = useState(null);
 
+  // Helpers for per-email attempts stored in localStorage under key 'loginAttempts'
+  const readAttemptsMap = () => {
+    try {
+      return JSON.parse(localStorage.getItem("loginAttempts") || "{}");
+    } catch (e) {
+      return {};
+    }
+  };
+  const writeAttemptsMap = (m) => {
+    try {
+      localStorage.setItem("loginAttempts", JSON.stringify(m));
+    } catch (e) {}
+  };
+  const getAttemptsFor = (email) => {
+    if (!email) return { count: 0, until: null };
+    const m = readAttemptsMap();
+    return m[email] || { count: 0, until: null };
+  };
+  const setAttemptsFor = (email, count, until = null) => {
+    const m = readAttemptsMap();
+    m[email] = { count, until };
+    writeAttemptsMap(m);
+  };
+
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
 
+  // Update attempts/lock when email changes
+  React.useEffect(() => {
+    if (!form.email) {
+      setAttempts(0);
+      setLockUntil(null);
+      return;
+    }
+    const info = getAttemptsFor(form.email);
+    setAttempts(info.count || 0);
+    setLockUntil(info.until || null);
+  }, [form.email]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // bloqueo temporal si excedió intentos
-    if (lockUntil && Date.now() < lockUntil) {
-      setError(`${t('login.credencialesInvalidas')} - ${Math.ceil((lockUntil - Date.now())/1000)}s`);
+    // read per-email lock
+    const info = getAttemptsFor(form.email);
+    if (info && info.until && Date.now() < info.until) {
+      setLockUntil(info.until);
+      setAttempts(info.count || 0);
+      setError(`${t('login.credencialesInvalidas')} - ${Math.ceil((info.until - Date.now())/1000)}s`);
       return;
     }
     setLoading(true);
@@ -52,24 +91,31 @@ export default function LoginForm() {
       // Credenciales de administrador
       const adminCredentials = {
         email: "admin@reforestacion.com",
-        password: "admin123"
+        password: "admin123",
       };
-      
-      // Verificar si es administrador
-      const isAdmin = form.email === adminCredentials.email && 
-                      form.password === adminCredentials.password;
-      
+
       // Simulación de espera
       await new Promise((r) => setTimeout(r, 600));
-      
+
+      // Buscar en usuarios locales
+      const usuarios = JSON.parse(localStorage.getItem("usuarios") || "[]");
+      const matched = usuarios.find(u => u.email === form.email && u.password === form.password);
+
+      const isAdmin = form.email === adminCredentials.email && form.password === adminCredentials.password;
+
+      if (!matched && !isAdmin) {
+        // credenciales invalidas
+        throw new Error("Invalid credentials");
+      }
+
       // Simular usuario autenticado: guarda en storage según "recordarme"
       const authUser = {
-        name: isAdmin ? "Administrador" : form.email.split("@")[0].replace(/\W/g, " ").trim() || "Usuario",
+        name: isAdmin ? "Administrador" : (matched?.nombre || form.email.split("@")[0].replace(/\W/g, " ").trim() || "Usuario"),
         email: form.email,
-        avatar: "/avatars/user.jpg",
-        role: isAdmin ? "admin" : "user"
+        avatar: (matched && matched.avatar) || "/avatars/user.jpg",
+        role: isAdmin ? "admin" : (matched?.role || "user"),
       };
-      
+
       try {
         if (remember) {
           localStorage.setItem("authUser", JSON.stringify(authUser));
@@ -79,24 +125,29 @@ export default function LoginForm() {
       } catch (e) {
         // si falla localStorage, ignorar
       }
-      // redirigir a la página principal
-      // resetear intentos en exito
-      setAttempts(0);
-      setLockUntil(null);
-      router.push("/");
+
+  // resetear intentos en exito (por email)
+  setAttemptsFor(form.email, 0, null);
+  setAttempts(0);
+  setLockUntil(null);
+  // show toast
+  try { window.dispatchEvent(new CustomEvent('app:toast', { detail: { title: 'Bienvenido', message: 'Has iniciado sesión correctamente. ¡Gracias por ayudar al planeta!' } })); } catch(e) {}
+  router.push("/");
     } catch (err) {
-      // manejar intento fallido
-      setAttempts(a => {
-        const next = a + 1;
-        if (next >= 3) {
-          const until = Date.now() + 30000; // 30s bloqueo
-          setLockUntil(until);
-          setError(t('login.credencialesInvalidas'));
-        } else {
-          setError(t('login.credencialesInvalidas'));
-        }
-        return next;
-      });
+      // manejar intento fallido por email
+      const current = getAttemptsFor(form.email);
+      const nextCount = (current.count || 0) + 1;
+      if (nextCount >= 3) {
+        const until = Date.now() + 30 * 1000; // 30s bloqueo
+        setAttemptsFor(form.email, nextCount, until);
+        setLockUntil(until);
+        setAttempts(nextCount);
+        setError(t("login.credencialesInvalidas"));
+      } else {
+        setAttemptsFor(form.email, nextCount, null);
+        setAttempts(nextCount);
+        setError(t("login.credencialesInvalidas"));
+      }
     }
     setLoading(false);
   };

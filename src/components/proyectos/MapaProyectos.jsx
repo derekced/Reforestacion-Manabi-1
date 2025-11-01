@@ -244,6 +244,10 @@ function MapaProyectos() {
                     </div>
                   </div>
                 </div>
+                <div className="mt-3 flex items-center gap-2">
+                  {/* Botón para unirse al proyecto */}
+                  <JoinButton evento={evento} />
+                </div>
               </Popup>
             </Marker>
           ))}
@@ -259,3 +263,57 @@ function MapaProyectos() {
 }
 
 export default MapaProyectos;
+
+function JoinButton({ evento }) {
+  // small component to handle join logic
+  const handleJoin = () => {
+    try {
+      const authRaw = localStorage.getItem('authUser') || sessionStorage.getItem('authUser');
+      if (!authRaw) {
+        // redirect to login
+        window.location.href = '/login';
+        return;
+      }
+      const user = JSON.parse(authRaw);
+
+      const regsRaw = localStorage.getItem('eventRegistrations') || '[]';
+      const regs = JSON.parse(regsRaw);
+
+      // check if user already registered for this event
+      const exists = regs.find(r => r.evento && r.evento.id === evento.id && r.userEmail === user.email);
+      if (exists) {
+        alert('Ya estás registrado en este proyecto.');
+        return;
+      }
+
+      const newReg = {
+        id: `${evento.id}-${user.email}-${Date.now()}`,
+        evento: evento,
+        userEmail: user.email,
+        userName: user.name || user.email.split('@')[0],
+        estado: 'confirmado',
+        fechaRegistro: new Date().toISOString()
+      };
+
+      regs.push(newReg);
+      localStorage.setItem('eventRegistrations', JSON.stringify(regs));
+      // notify listeners
+      window.dispatchEvent(new Event('registrationChange'));
+      window.dispatchEvent(new Event('storage'));
+  // show friendly toast instead of alert
+  try { window.dispatchEvent(new CustomEvent('app:toast', { detail: { title: 'Gracias por ayudar', message: 'Gracias por ayudar al planeta — gracias por unirte al proyecto.' } })); } catch(e) {}
+    } catch (e) {
+      console.error('Error registrando al proyecto', e);
+      alert('No se pudo registrar en el proyecto.');
+    }
+  };
+
+  return (
+    <button
+      onClick={handleJoin}
+      className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium"
+    >
+      Unirse al proyecto
+    </button>
+  );
+}

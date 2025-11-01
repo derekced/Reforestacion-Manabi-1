@@ -17,6 +17,7 @@ export default function RegisterForm({ onBack }) {
     telefono: "",
     ciudad: "",
     terminos: false,
+    role: "user", // 'user' or 'volunteer'
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -77,6 +78,12 @@ export default function RegisterForm({ onBack }) {
       return;
     }
 
+    // role validation
+    if (!['user','volunteer'].includes(form.role)) {
+      setError('Rol inválido');
+      return;
+    }
+
     setLoading(true);
     
     try {
@@ -97,6 +104,7 @@ export default function RegisterForm({ onBack }) {
         email: form.email,
         telefono: form.telefono,
         ciudad: form.ciudad,
+        role: form.role,
         password: form.password, // En producción, esto debe estar hasheado
         fechaRegistro: new Date().toISOString(),
       };
@@ -247,6 +255,21 @@ export default function RegisterForm({ onBack }) {
           className="mt-1 block w-full rounded-xl border border-gray-300 dark:border-gray-600 px-4 py-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
         />
       </label>
+
+      {/* Rol: Usuario o Voluntario */}
+      <div className="block mb-4">
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">¿Te registras como:</span>
+        <div className="flex gap-4">
+          <label className="inline-flex items-center gap-2">
+            <input type="radio" name="role" value="user" checked={form.role === 'user'} onChange={handleChange} />
+            <span className="text-sm">Usuario común</span>
+          </label>
+          <label className="inline-flex items-center gap-2">
+            <input type="radio" name="role" value="volunteer" checked={form.role === 'volunteer'} onChange={handleChange} />
+            <span className="text-sm">Voluntariado</span>
+          </label>
+        </div>
+      </div>
 
       {/* Términos */}
       <label className="flex items-start gap-3 mb-6 cursor-pointer">

@@ -36,10 +36,18 @@ export default function MisProyectos() {
 
   const cargarRegistros = () => {
     try {
+      const authRaw = localStorage.getItem('authUser') || sessionStorage.getItem('authUser');
+      if (!authRaw) {
+        setRegistros([]);
+        return;
+      }
+      const user = JSON.parse(authRaw);
+
       const data = localStorage.getItem('eventRegistrations');
       if (data) {
         const parsed = JSON.parse(data);
-        setRegistros(parsed.filter(r => r.estado === 'confirmado'));
+        // Filter only registrations for current user and confirmed
+        setRegistros(parsed.filter(r => r.estado === 'confirmado' && r.userEmail === user.email));
       }
     } catch (error) {
       console.error('Error al cargar registros:', error);

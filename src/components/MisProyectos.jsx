@@ -117,7 +117,7 @@ export default function MisProyectos() {
     }
 
     // Validar que no exceda el límite de árboles del proyecto
-    const maxArboles = selectedRegistro.evento.arboles;
+    const maxArboles = selectedRegistro.evento.arboles || 1000;
     if (Number(arbolesPlantados) > maxArboles) {
       alert(t('misProyectos.excedeLimite').replace('{max}', maxArboles));
       return;
@@ -218,7 +218,7 @@ export default function MisProyectos() {
                     </h3>
                   </div>
                   <p className="text-gray-600 dark:text-gray-400 mb-3">
-                    {registro.evento.descripcion}
+                    {registro.evento.descripcion || 'Proyecto de reforestación'}
                   </p>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
@@ -243,7 +243,7 @@ export default function MisProyectos() {
                   <TreePine className="w-4 h-4 text-green-600 dark:text-green-400" />
                   <div>
                     <p className="text-gray-500 dark:text-gray-400 text-xs">{t('misProyectos.arboles')}</p>
-                    <p className="font-medium text-gray-800 dark:text-white">{registro.evento.arboles}</p>
+                    <p className="font-medium text-gray-800 dark:text-white">{registro.evento.arboles || 0}</p>
                   </div>
                 </div>
 
@@ -251,7 +251,7 @@ export default function MisProyectos() {
                   <Users className="w-4 h-4 text-green-600 dark:text-green-400" />
                   <div>
                     <p className="text-gray-500 dark:text-gray-400 text-xs">{t('misProyectos.voluntarios')}</p>
-                    <p className="font-medium text-gray-800 dark:text-white">{registro.evento.voluntarios}</p>
+                    <p className="font-medium text-gray-800 dark:text-white">{registro.evento.voluntarios || 0}</p>
                   </div>
                 </div>
 
@@ -267,7 +267,9 @@ export default function MisProyectos() {
               <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 mb-4">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   <span className="font-semibold">{t('misProyectos.especies')}: </span>
-                  {registro.evento.especies.join(', ')}
+                  {registro.evento.especies && Array.isArray(registro.evento.especies) 
+                    ? registro.evento.especies.join(', ') 
+                    : 'No especificado'}
                 </p>
               </div>
 
@@ -398,7 +400,7 @@ export default function MisProyectos() {
                 <input
                   type="number"
                   min="1"
-                  max={selectedRegistro.evento.arboles}
+                  max={selectedRegistro.evento.arboles || 1000}
                   value={arbolesPlantados}
                   onChange={(e) => setArbolesPlantados(e.target.value)}
                   placeholder={t('misProyectos.placeholderArboles')}
@@ -407,7 +409,7 @@ export default function MisProyectos() {
                 />
               </div>
               <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                {t('misProyectos.limiteProyecto')}: <span className="font-semibold text-green-600 dark:text-green-400">{selectedRegistro.evento.arboles}</span> {t('misProyectos.arboles')}
+                {t('misProyectos.limiteProyecto')}: <span className="font-semibold text-green-600 dark:text-green-400">{selectedRegistro.evento.arboles || 1000}</span> {t('misProyectos.arboles')}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
                 {t('misProyectos.soloTuyos')}

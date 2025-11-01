@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import ProfileForm from "@/components/formu/ProfileForm";
 import MisProyectos from "@/components/MisProyectos";
+import AdminDashboard from "@/components/AdminDashboard";
 import WidgetImpacto from "@/components/WidgetImpacto";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { PageContainer } from "@/components/PageContainer";
@@ -10,6 +11,21 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 function ProfilePage() {
   const { t } = useLanguage();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    try {
+      const authUserLocal = localStorage.getItem('authUser');
+      const authUserSession = sessionStorage.getItem('authUser');
+      const authRaw = authUserLocal || authUserSession;
+      
+      if (authRaw) {
+        setUser(JSON.parse(authRaw));
+      }
+    } catch (e) {
+      console.error('Error loading user:', e);
+    }
+  }, []);
   
   return (
     <PageContainer>
@@ -35,9 +51,13 @@ function ProfilePage() {
               <WidgetImpacto />
             </div>
 
-            {/* Columna derecha - Proyectos registrados */}
+            {/* Columna derecha - Proyectos registrados o Dashboard Admin */}
             <div className="lg:col-span-2">
-              <MisProyectos />
+              {user?.role === 'admin' ? (
+                <AdminDashboard />
+              ) : (
+                <MisProyectos />
+              )}
             </div>
           </div>
         </div>

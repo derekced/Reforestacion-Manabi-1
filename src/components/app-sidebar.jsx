@@ -3,18 +3,14 @@
 import * as React from "react";
 import { usePathname } from "next/navigation";
 import {
-  BookOpen,
   Home,
   Leaf,
   BarChart3,
   Settings,
   Users,
   LogOut,
-  Moon,
-  Sun,
-  Globe,
+  UserCheck,
 } from "lucide-react";
-import { useTheme } from "next-themes";
 import { useLanguage } from "@/contexts/LanguageContext";
 import WidgetImpacto from "@/components/WidgetImpacto";
 import WidgetAdmin from "@/components/WidgetAdmin";
@@ -24,7 +20,6 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -33,11 +28,8 @@ import {
 } from "@/components/ui/sidebar";
 
 export function AppSidebar({ ...props }) {
-  const { theme, setTheme } = useTheme();
   const { t } = useLanguage();
   const pathname = usePathname();
-  const [mounted, setMounted] = React.useState(false);
-  const [language, setLanguage] = React.useState('es');
   const [isLoading, setIsLoading] = React.useState(true);
   // `user` is null when no authenticated user exists
   const [user, setUser] = React.useState(null);
@@ -74,6 +66,11 @@ export function AppSidebar({ ...props }) {
         url: "/admin",
         icon: Settings,
       },
+      {
+        title: t('gestionVoluntarios.titulo'),
+        url: "/voluntarios",
+        icon: UserCheck,
+      },
     ] : [];
 
     // Items de autenticación (solo si no hay usuario)
@@ -94,18 +91,6 @@ export function AppSidebar({ ...props }) {
   };
 
   React.useEffect(() => {
-    setMounted(true);
-    
-    // Cargar idioma guardado
-    try {
-      const savedLanguage = localStorage.getItem('language');
-      if (savedLanguage) {
-        setLanguage(savedLanguage);
-      }
-    } catch (e) {
-      // ignore
-    }
-    
     try {
       const raw = localStorage.getItem("authUser");
       if (raw) setUser(JSON.parse(raw));
@@ -129,17 +114,6 @@ export function AppSidebar({ ...props }) {
     window.addEventListener("authChange", onAuthChange);
     return () => window.removeEventListener("authChange", onAuthChange);
   }, []);
-
-  const handleLanguageChange = () => {
-    const newLanguage = language === 'es' ? 'en' : 'es';
-    setLanguage(newLanguage);
-    try {
-      localStorage.setItem('language', newLanguage);
-      window.dispatchEvent(new Event('languageChange'));
-    } catch (e) {
-      // ignore
-    }
-  };
 
   // Filter and reorder nav items based on authentication and access
   const navItems = React.useMemo(() => {
@@ -205,54 +179,6 @@ export function AppSidebar({ ...props }) {
 
       {/* Footer del Sidebar */}
       <SidebarFooter className="bg-forest-dark dark:bg-gray-900 p-3 border-t border-white/10 dark:border-gray-800">
-        {/* Selector de Idioma */}
-        <div className="mb-2 group-data-[collapsible=icon]:mb-0">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={handleLanguageChange}
-                className="w-full bg-white/5 hover:bg-white/10 dark:bg-white/5 dark:hover:bg-white/10 text-forest-lightest dark:text-gray-300"
-                tooltip={language === 'es' ? t('sidebar.ingles') : t('sidebar.espanol')}
-              >
-                {mounted && (
-                  <>
-                    <Globe className="h-4 w-4" />
-                    <span className="group-data-[collapsible=icon]:hidden">
-                      {language === 'es' ? t('sidebar.espanol') : t('sidebar.ingles')}
-                    </span>
-                  </>
-                )}
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </div>
-
-        {/* Toggle de Dark Mode */}
-        <div className="mb-2 group-data-[collapsible=icon]:mb-0">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="w-full bg-white/5 hover:bg-white/10 dark:bg-white/5 dark:hover:bg-white/10 text-forest-lightest dark:text-gray-300"
-                tooltip={theme === "dark" ? t('sidebar.modoClaro') : t('sidebar.modoOscuro')}
-              >
-                {mounted && (
-                  <>
-                    {theme === "dark" ? (
-                      <Sun className="h-4 w-4" />
-                    ) : (
-                      <Moon className="h-4 w-4" />
-                    )}
-                    <span className="group-data-[collapsible=icon]:hidden">
-                      {theme === "dark" ? t('sidebar.modoClaro') : t('sidebar.modoOscuro')}
-                    </span>
-                  </>
-                )}
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </div>
-
         {/* Usuario: mostrar solo si hay sesión iniciada */}
         {!isLoading && user && <NavUser user={user} />}
       </SidebarFooter>

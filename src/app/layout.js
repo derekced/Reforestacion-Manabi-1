@@ -3,6 +3,7 @@ import "./globals.css";
 import { AppSidebar } from "@/components/app-sidebar";
 import SeedUsers from "@/components/SeedUsers";
 import ToastContainer from "@/components/ui/Toast";
+import Footer from "@/components/Footer";
 import { ThemeProvider } from "@/components/theme-provider";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import {
@@ -75,7 +76,12 @@ export default function RootLayout({ children }) {
                     </Breadcrumb>
                   </div>
                 </header>
-                {children}
+                <div className="flex flex-col min-h-[calc(100vh-4rem)]">
+                  <main className="flex-1">
+                    {children}
+                  </main>
+                  <Footer />
+                </div>
               </SidebarInset>
             </SidebarProvider>
           </ThemeProvider>

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useLanguage } from '@/contexts/LanguageContext';
+import FormularioUnirseEvento from './FormularioUnirseEvento';
 
 // Función para cargar proyectos desde localStorage
 const getProyectos = () => {
@@ -105,6 +106,8 @@ function MapaProyectos() {
   const { t } = useLanguage();
   const [filtroEstado, setFiltroEstado] = useState('Todos');
   const [eventosReforestacion, setEventosReforestacion] = useState([]);
+  const [showFormulario, setShowFormulario] = useState(false);
+  const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
   
   // Cargar proyectos desde localStorage
   useEffect(() => {
@@ -246,7 +249,13 @@ function MapaProyectos() {
                 </div>
                 <div className="mt-3 flex items-center gap-2">
                   {/* Botón para unirse al proyecto */}
-                  <JoinButton evento={evento} />
+                  <JoinButton 
+                    evento={evento} 
+                    onOpenForm={() => {
+                      setEventoSeleccionado(evento);
+                      setShowFormulario(true);
+                    }}
+                  />
                 </div>
               </Popup>
             </Marker>
@@ -258,60 +267,63 @@ function MapaProyectos() {
       <div className="text-center text-sm text-gray-600 dark:text-gray-400">
         Mostrando {eventosFiltrados.length} de {eventosReforestacion.length} proyectos
       </div>
+
+      {/* Formulario Modal */}
+      <FormularioUnirseEvento
+        evento={eventoSeleccionado}
+        isOpen={showFormulario}
+        onClose={() => {
+          setShowFormulario(false);
+          setEventoSeleccionado(null);
+        }}
+      />
     </div>
   );
 }
 
 export default MapaProyectos;
 
-function JoinButton({ evento }) {
-  // small component to handle join logic
+function JoinButton({ evento, onOpenForm }) {
   const handleJoin = () => {
+    // Verificar si el usuario está autenticado
+    const authRaw = localStorage.getItem('authUser') || sessionStorage.getItem('authUser');
+    if (!authRaw) {
+      // Redirigir al login si no está autenticado
+      globalThis.window.location.href = '/login';
+      return;
+    }
+    
+    // Verificar si el usuario es administrador
     try {
-      const authRaw = localStorage.getItem('authUser') || sessionStorage.getItem('authUser');
-      if (!authRaw) {
-        // redirect to login
-        window.location.href = '/login';
+      const user = JSON.parse(authRaw);
+      
+      // Los administradores no pueden registrarse en proyectos
+      if (user.role === 'admin') {
+        alert('Los administradores no pueden registrarse en proyectos. Puedes gestionar los proyectos desde el panel de administración.');
         return;
       }
-      const user = JSON.parse(authRaw);
-
+      
+      // Verificar si ya está registrado
       const regsRaw = localStorage.getItem('eventRegistrations') || '[]';
       const regs = JSON.parse(regsRaw);
 
-      // check if user already registered for this event
       const exists = regs.find(r => r.evento && r.evento.id === evento.id && r.userEmail === user.email);
       if (exists) {
         alert('Ya estás registrado en este proyecto.');
         return;
       }
-
-      const newReg = {
-        id: `${evento.id}-${user.email}-${Date.now()}`,
-        evento: evento,
-        userEmail: user.email,
-        userName: user.name || user.email.split('@')[0],
-        estado: 'confirmado',
-        fechaRegistro: new Date().toISOString()
-      };
-
-      regs.push(newReg);
-      localStorage.setItem('eventRegistrations', JSON.stringify(regs));
-      // notify listeners
-      window.dispatchEvent(new Event('registrationChange'));
-      window.dispatchEvent(new Event('storage'));
-  // show friendly toast instead of alert
-  try { window.dispatchEvent(new CustomEvent('app:toast', { detail: { title: 'Gracias por ayudar', message: 'Gracias por ayudar al planeta — gracias por unirte al proyecto.' } })); } catch(e) {}
     } catch (e) {
-      console.error('Error registrando al proyecto', e);
-      alert('No se pudo registrar en el proyecto.');
+      console.error('Error checking registration:', e);
     }
+    
+    // Abrir el formulario
+    onOpenForm();
   };
 
   return (
     <button
       onClick={handleJoin}
-      className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium"
+      className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
     >
       Unirse al proyecto
     </button>

@@ -364,6 +364,79 @@ export const translations = {
       fechaLabel: "Fecha",
       coordenadas: "Coordenadas",
     },
+    
+    // Panel de Control Admin
+    adminDashboard: {
+      titulo: "Panel de Control",
+      subtitulo: "Vista general del sistema de reforestación",
+      totalProyectos: "Total Proyectos",
+      activos: "Activos",
+      proximos: "Próximos",
+      voluntariosActivos: "Voluntarios Activos",
+      registrosTotales: "registros totales",
+      asistenciasRegistradas: "Asistencias Registradas",
+      participacionesConfirmadas: "Participaciones confirmadas",
+      arbolesPlantados: "Árboles Plantados",
+      impactoReal: "Impacto real confirmado",
+      distribucionProyectos: "Distribución de Proyectos por Estado",
+      proyectosActivos: "Proyectos Activos",
+      proyectosProximos: "Proyectos Próximos",
+      proyectosCompletados: "Proyectos Completados",
+      actividadReciente: "Actividad Reciente",
+      seRegistroEn: "Se registró en:",
+      noHayActividad: "No hay actividad reciente",
+      accesoRapido: "Acceso Rápido",
+      gestionarProyectos: "Gestionar Proyectos",
+      crearEditar: "Crear y editar",
+      verVoluntarios: "Ver Voluntarios",
+      listaCompleta: "Lista completa",
+      asistencias: "Asistencias",
+      gestionarRegistros: "Gestionar registros",
+    },
+    
+    // Gestión de Voluntarios
+    gestionVoluntarios: {
+      titulo: "Gestión de Voluntarios",
+      subtitulo: "Administra los voluntarios de cada proyecto",
+      proyectos: "Proyectos",
+      noProyectos: "No hay proyectos disponibles",
+      voluntariosEn: "Voluntarios en",
+      registrados: "registrados",
+      buscar: "Buscar por nombre, email o teléfono...",
+      edad: "Edad",
+      anios: "años",
+      experiencia: "Experiencia",
+      disponibilidad: "Disponibilidad",
+      transporte: "Transporte",
+      verDetalle: "Ver detalle completo",
+      noResultados: "No se encontraron resultados",
+      noVoluntarios: "No hay voluntarios registrados en este proyecto",
+      seleccionaProyecto: "Selecciona un proyecto",
+      seleccionaProyectoDesc: "Elige un proyecto de la lista para ver sus voluntarios",
+      detalleCompleto: "Detalle completo del voluntario",
+      informacionContacto: "Información de Contacto",
+      email: "Email",
+      telefono: "Teléfono",
+      proyecto: "Proyecto",
+      nombreProyecto: "Nombre del proyecto",
+      fechaRegistro: "Fecha de registro",
+      perfilVoluntario: "Perfil del Voluntario",
+      comentarios: "Comentarios adicionales",
+    },
+    
+    // Footer
+    footer: {
+      titulo: "Reforestación Manabí",
+      descripcion: "Comprometidos con la restauración del ecosistema de Manabí a través de la reforestación sostenible y la participación comunitaria.",
+      enlacesRapidos: "Enlaces Rápidos",
+      contacto: "Contacto",
+      ubicacion: "Manabí, Ecuador",
+      siguenos: "Síguenos",
+      redesSociales: "Únete a nuestra comunidad en redes sociales",
+      derechosReservados: "Reforestación Manabí. Todos los derechos reservados.",
+      hechoConAmor: "Hecho con",
+      porVoluntarios: "por voluntarios",
+    },
   },
   
   en: {
@@ -725,6 +798,79 @@ export const translations = {
       fechaLabel: "Date",
       coordenadas: "Coordinates",
     },
+    
+    // Admin Control Panel
+    adminDashboard: {
+      titulo: "Control Panel",
+      subtitulo: "Overview of the reforestation system",
+      totalProyectos: "Total Projects",
+      activos: "Active",
+      proximos: "Upcoming",
+      voluntariosActivos: "Active Volunteers",
+      registrosTotales: "total registrations",
+      asistenciasRegistradas: "Registered Attendances",
+      participacionesConfirmadas: "Confirmed participations",
+      arbolesPlantados: "Trees Planted",
+      impactoReal: "Real confirmed impact",
+      distribucionProyectos: "Projects Distribution by Status",
+      proyectosActivos: "Active Projects",
+      proyectosProximos: "Upcoming Projects",
+      proyectosCompletados: "Completed Projects",
+      actividadReciente: "Recent Activity",
+      seRegistroEn: "Registered in:",
+      noHayActividad: "No recent activity",
+      accesoRapido: "Quick Access",
+      gestionarProyectos: "Manage Projects",
+      crearEditar: "Create and edit",
+      verVoluntarios: "View Volunteers",
+      listaCompleta: "Complete list",
+      asistencias: "Attendances",
+      gestionarRegistros: "Manage records",
+    },
+    
+    // Volunteer Management
+    gestionVoluntarios: {
+      titulo: "Volunteer Management",
+      subtitulo: "Manage volunteers for each project",
+      proyectos: "Projects",
+      noProyectos: "No projects available",
+      voluntariosEn: "Volunteers in",
+      registrados: "registered",
+      buscar: "Search by name, email or phone...",
+      edad: "Age",
+      anios: "years old",
+      experiencia: "Experience",
+      disponibilidad: "Availability",
+      transporte: "Transport",
+      verDetalle: "View full details",
+      noResultados: "No results found",
+      noVoluntarios: "No volunteers registered for this project",
+      seleccionaProyecto: "Select a project",
+      seleccionaProyectoDesc: "Choose a project from the list to view its volunteers",
+      detalleCompleto: "Full volunteer details",
+      informacionContacto: "Contact Information",
+      email: "Email",
+      telefono: "Phone",
+      proyecto: "Project",
+      nombreProyecto: "Project name",
+      fechaRegistro: "Registration date",
+      perfilVoluntario: "Volunteer Profile",
+      comentarios: "Additional comments",
+    },
+    
+    // Footer
+    footer: {
+      titulo: "Reforestation Manabí",
+      descripcion: "Committed to restoring the Manabí ecosystem through sustainable reforestation and community participation.",
+      enlacesRapidos: "Quick Links",
+      contacto: "Contact",
+      ubicacion: "Manabí, Ecuador",
+      siguenos: "Follow Us",
+      redesSociales: "Join our social media community",
+      derechosReservados: "Reforestation Manabí. All rights reserved.",
+      hechoConAmor: "Made with",
+      porVoluntarios: "by volunteers",
+    },
   },
 };
 
@@ -773,8 +919,19 @@ export function LanguageProvider({ children }) {
     return value;
   };
 
+  const toggleLanguage = () => {
+    const newLanguage = language === 'es' ? 'en' : 'es';
+    setLanguage(newLanguage);
+    try {
+      localStorage.setItem('language', newLanguage);
+      window.dispatchEvent(new Event('languageChange'));
+    } catch (e) {
+      console.error('Error saving language:', e);
+    }
+  };
+
   return (
-    <LanguageContext.Provider value={{ language, t }}>
+    <LanguageContext.Provider value={{ language, t, toggleLanguage }}>
       {children}
     </LanguageContext.Provider>
   );

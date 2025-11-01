@@ -4,9 +4,14 @@ import {
   Bell,
   ChevronsUpDown,
   LogOut,
+  Moon,
+  Sun,
+  Globe,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useState, useEffect } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -28,7 +33,13 @@ import {
 export function NavUser({ user }) {
   const { isMobile } = useSidebar();
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, language, toggleLanguage } = useLanguage();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogout = () => {
     try {
@@ -97,6 +108,41 @@ export function NavUser({ user }) {
               <DropdownMenuItem className="text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700">
                 <Bell className="text-gray-600 dark:text-gray-400" />
                 {t('userMenu.notificaciones')}
+              </DropdownMenuItem>
+              
+              {/* Cambiar idioma */}
+              <DropdownMenuItem 
+                onClick={toggleLanguage}
+                className="text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700"
+              >
+                {mounted && (
+                  <>
+                    <Globe className="text-gray-600 dark:text-gray-400" />
+                    {language === 'es' ? 'English' : 'Español'}
+                  </>
+                )}
+              </DropdownMenuItem>
+              
+              {/* Cambiar tema */}
+              <DropdownMenuItem 
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700"
+              >
+                {mounted && (
+                  <>
+                    {theme === "dark" ? (
+                      <>
+                        <Sun className="text-gray-600 dark:text-gray-400" />
+                        {t('sidebar.modoClaro')}
+                      </>
+                    ) : (
+                      <>
+                        <Moon className="text-gray-600 dark:text-gray-400" />
+                        {t('sidebar.modoOscuro')}
+                      </>
+                    )}
+                  </>
+                )}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-700" />

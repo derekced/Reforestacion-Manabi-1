@@ -5,15 +5,31 @@ import { useRouter } from 'next/navigation';
 import PageContainer from '@/components/PageContainer';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useLanguage } from '@/contexts/LanguageContext';
+import Toast from '@/components/ui/Toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Plus, Edit, Trash2, MapPin, Save, X, Trees } from 'lucide-react';
 
 function AdminPage() {
   const { t } = useLanguage();
   const router = useRouter();
+  
+  // Helper function to get translated status text
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'completed': return t('admin.completedStatus');
+      case 'in_progress': return t('admin.inProgressStatus');
+      default: return t('admin.upcomingStatus');
+    }
+  };
+  
+  // All state hooks in a consistent order
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [projectToDelete, setProjectToDelete] = useState(null);
   const [proyectos, setProyectos] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [availableOrganizers, setAvailableOrganizers] = useState([]);
   const [formData, setFormData] = useState({
     id: '',
     nombre: '',
@@ -24,8 +40,9 @@ function AdminPage() {
     voluntarios: '',
     especies: '',
     fecha: '',
-    estado: 'Próximo',
-    descripcion: ''
+    estado: t('admin.upcoming'),
+    descripcion: '',
+    organizers: []
   });
 
   // Ubicaciones predefinidas de Manabí
@@ -85,25 +102,36 @@ function AdminPage() {
           voluntarios: 150,
           especies: 'Guayacán, Ceibo, Fernán Sánchez',
           fecha: '2025-02-15',
-          estado: 'Próximo',
-          descripcion: 'Recuperación de bosque seco tropical en el Parque Nacional Machalilla'
+          estado: 'upcoming',
+          descripcion: 'Recuperación de bosque seco tropical en el Parque Nacional Machalilla',
+          organizers: ['organizer1@example.com']
         },
         {
           id: '2',
           nombre: 'Bosque Urbano Manta',
           ubicacion: 'Manta',
           lat: -0.9537,
-          lng: -0.7089,
+          lng: -80.7089,
           arboles: 1200,
           voluntarios: 80,
           especies: 'Neem, Almendro, Laurel',
           fecha: '2025-01-20',
-          estado: 'Activo',
-          descripcion: 'Creación de bosque urbano en la zona costera de Manta'
+          estado: 'in_progress',
+          descripcion: 'Creación de bosque urbano en la zona costera de Manta',
+          organizers: []
         }
       ];
       localStorage.setItem('proyectos', JSON.stringify(defaultProjects));
       setProyectos(defaultProjects);
+    }
+    // Cargar lista de organizadores disponibles (usuarios con role === 'organizer')
+    try {
+      const usuariosRaw = localStorage.getItem('usuarios') || '[]';
+      const usuarios = JSON.parse(usuariosRaw);
+      const orgs = usuarios.filter(u => u.role === 'organizer').map(u => ({ email: u.email, nombre: u.nombre }));
+      setAvailableOrganizers(orgs);
+    } catch (e) {
+      setAvailableOrganizers([]);
     }
   }, [isAdmin]);
 
@@ -128,6 +156,19 @@ function AdminPage() {
     }));
   };
 
+  const handleOrganizersChange = (email, checked) => {
+    setFormData(prev => {
+      const list = Array.isArray(prev.organizers) ? [...prev.organizers] : [];
+      if (checked) {
+        if (!list.includes(email)) list.push(email);
+      } else {
+        const idx = list.indexOf(email);
+        if (idx !== -1) list.splice(idx, 1);
+      }
+      return { ...prev, organizers: list };
+    });
+  };
+
   const handleUbicacionChange = (e) => {
     const ubicacionNombre = e.target.value;
     const ubicacion = ubicacionesManabi.find(u => u.nombre === ubicacionNombre);
@@ -150,25 +191,31 @@ function AdminPage() {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    if (editingProject) {
-      // Actualizar proyecto existente
-      const updatedProjects = proyectos.map(p => 
-        p.id === editingProject.id ? { ...formData, id: editingProject.id } : p
-      );
-      setProyectos(updatedProjects);
-      localStorage.setItem('proyectos', JSON.stringify(updatedProjects));
-    } else {
-      // Crear nuevo proyecto
-      const newProject = {
-        ...formData,
-        id: Date.now().toString()
-      };
-      const updatedProjects = [...proyectos, newProject];
-      setProyectos(updatedProjects);
-      localStorage.setItem('proyectos', JSON.stringify(updatedProjects));
+    try {
+      if (editingProject) {
+        // Actualizar proyecto existente
+        const updatedProjects = proyectos.map(p => 
+          p.id === editingProject.id ? { ...formData, id: editingProject.id } : p
+        );
+        setProyectos(updatedProjects);
+        localStorage.setItem('proyectos', JSON.stringify(updatedProjects));
+        showToast(t('admin.saveSuccess'), 'success');
+      } else {
+        // Crear nuevo proyecto
+        const newProject = {
+          ...formData,
+          id: Date.now().toString()
+        };
+        const updatedProjects = [...proyectos, newProject];
+        setProyectos(updatedProjects);
+        localStorage.setItem('proyectos', JSON.stringify(updatedProjects));
+        showToast(t('admin.saveSuccess'), 'success');
+      }
+      
+      closeModal();
+    } catch (error) {
+      showToast(t('admin.saveError', 'Error saving project'), 'error');
     }
-    
-    closeModal();
   };
 
   const handleEdit = (project) => {
@@ -178,10 +225,16 @@ function AdminPage() {
   };
 
   const handleDelete = (id) => {
-    if (confirm(t('admin.confirmarEliminar'))) {
-      const updatedProjects = proyectos.filter(p => p.id !== id);
+    setProjectToDelete(id);
+  };
+
+  const confirmDelete = () => {
+    if (projectToDelete) {
+      const updatedProjects = proyectos.filter(p => p.id !== projectToDelete);
       setProyectos(updatedProjects);
       localStorage.setItem('proyectos', JSON.stringify(updatedProjects));
+      setProjectToDelete(null);
+      showToast(t('admin.deleteSuccess'), 'success');
     }
   };
 
@@ -197,11 +250,14 @@ function AdminPage() {
       voluntarios: '',
       especies: '',
       fecha: '',
-      estado: 'Próximo',
-      descripcion: ''
+      estado: 'upcoming',
+      descripcion: '',
+      organizers: []
     });
     setIsModalOpen(true);
   };
+
+
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -216,14 +272,39 @@ function AdminPage() {
       voluntarios: '',
       especies: '',
       fecha: '',
-      estado: 'Próximo',
-      descripcion: ''
+      estado: 'upcoming',
+      descripcion: '',
+      organizers: []
     });
   };
 
   return (
     <PageContainer>
       <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+        {toast.show && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast({ show: false, message: '', type: 'success' })}
+          />
+        )}
+
+        <AlertDialog open={projectToDelete !== null} onOpenChange={() => setProjectToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('admin.deleteProject')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t('admin.confirmDelete')}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t('admin.cancel')}</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete}>
+                {t('admin.deleteProject')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
@@ -245,7 +326,7 @@ function AdminPage() {
               className="bg-linear-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2"
             >
               <Plus className="w-5 h-5" strokeWidth={2.5} />
-              {t('admin.nuevoProyecto')}
+              {t('common.newProject')}
             </button>
           </div>
         </div>
@@ -256,98 +337,33 @@ function AdminPage() {
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-12 text-center">
               <Trees className="w-16 h-16 mx-auto mb-4 text-gray-400" strokeWidth={2} />
               <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">
-                {t('admin.noHayProyectos')}
+                {t('admin.noProjects')}
               </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                {t('admin.noHayProyectosDesc')}
-              </p>
-              <button
-                onClick={openNewProjectModal}
-                className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-semibold inline-flex items-center gap-2"
-              >
-                <Plus className="w-5 h-5" />
-                {t('admin.agregarProyecto')}
-              </button>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{t('admin.noProjectsDesc')}</p>
             </div>
           ) : (
-            proyectos.map((proyecto) => (
-              <div
-                key={proyecto.id}
-                className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
-              >
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-2xl font-bold text-gray-800 dark:text-white">
-                          {proyecto.nombre}
-                        </h3>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          proyecto.estado === 'Activo' 
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                            : proyecto.estado === 'Próximo'
-                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                            : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400'
-                        }`}>
-                          {proyecto.estado}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-3">
-                        <MapPin className="w-4 h-4" strokeWidth={2.5} />
-                        <span>{proyecto.ubicacion}</span>
-                      </div>
-                      <p className="text-gray-600 dark:text-gray-400 mb-4">
-                        {proyecto.descripcion}
-                      </p>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">{t('admin.arbolesLabel')}</p>
-                          <p className="text-lg font-bold text-green-700 dark:text-green-400">
-                            {proyecto.arboles}
-                          </p>
-                        </div>
-                        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">{t('admin.voluntariosLabel')}</p>
-                          <p className="text-lg font-bold text-blue-700 dark:text-blue-400">
-                            {proyecto.voluntarios}
-                          </p>
-                        </div>
-                        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3">
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">{t('admin.especiesLabelCard')}</p>
-                          <p className="text-sm font-semibold text-purple-700 dark:text-purple-400">
-                            {proyecto.especies.split(',').length}
-                          </p>
-                        </div>
-                        <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-3">
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">{t('admin.fechaLabel')}</p>
-                          <p className="text-sm font-semibold text-orange-700 dark:text-orange-400">
-                            {new Date(proyecto.fecha).toLocaleDateString('es-ES')}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="mt-3">
-                        <p className="text-xs text-gray-500 dark:text-gray-500">
-                          {t('admin.coordenadas')}: {proyecto.lat}, {proyecto.lng}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2 ml-4">
-                      <button
-                        onClick={() => handleEdit(proyecto)}
-                        className="p-2 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-400 rounded-lg transition-colors"
-                        title="Editar"
-                      >
-                        <Edit className="w-5 h-5" strokeWidth={2.5} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(proyecto.id)}
-                        className="p-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400 rounded-lg transition-colors"
-                        title="Eliminar"
-                      >
-                        <Trash2 className="w-5 h-5" strokeWidth={2.5} />
-                      </button>
-                    </div>
+            proyectos.map(project => (
+              <div key={project.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 flex items-start justify-between">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-800 dark:text-white">{project.nombre}</h3>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-gray-500 dark:text-gray-400">{project.ubicacion} • {project.fecha}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      project.estado === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                      project.estado === 'in_progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
+                      'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                    }`}>
+                      {getStatusText(project.estado)}
+                    </span>
                   </div>
+                  <p className="mt-3 text-gray-700 dark:text-gray-300 text-sm">{project.descripcion}</p>
+                  {project.organizers && project.organizers.length > 0 && (
+                    <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">{t('userMenu.organizadores')}: {project.organizers.join(', ')}</p>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <button onClick={() => handleEdit(project)} className="px-3 py-2 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg">{t('common.edit')}</button>
+                  <button onClick={() => handleDelete(project.id)} className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg">{t('common.delete')}</button>
                 </div>
               </div>
             ))
@@ -360,7 +376,7 @@ function AdminPage() {
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto">
               <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between z-10">
                 <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
-                  {editingProject ? t('admin.editarProyecto') : t('admin.nuevoProyecto')}
+                  {editingProject ? t('common.edit') : t('common.newProject')}
                 </h2>
                 <button
                   onClick={closeModal}
@@ -390,7 +406,7 @@ function AdminPage() {
                 {/* Ubicación */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('admin.ubicacion')} *
+                    {t('admin.location')} *
                   </label>
                   <select
                     name="ubicacion"
@@ -399,7 +415,7 @@ function AdminPage() {
                     required
                     className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   >
-                    <option value="">{t('admin.seleccionaUbicacion')}</option>
+                    <option value="">{t('admin.selectLocation')}</option>
                     {ubicacionesManabi.map((ub) => (
                       <option key={ub.nombre} value={ub.nombre}>
                         {ub.nombre}
@@ -542,7 +558,7 @@ function AdminPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      {t('admin.estado')} *
+                      {t('admin.projectStatus')} *
                     </label>
                     <select
                       name="estado"
@@ -551,14 +567,33 @@ function AdminPage() {
                       required
                       className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     >
-                      <option value="Próximo">{t('admin.proximo')}</option>
-                      <option value="Activo">{t('admin.activo')}</option>
-                      <option value="Completado">{t('admin.completado')}</option>
+                      <option value="upcoming">{t('admin.upcomingStatus')}</option>
+                      <option value="in_progress">{t('admin.inProgressStatus')}</option>
+                      <option value="completed">{t('admin.completedStatus')}</option>
                     </select>
                   </div>
                 </div>
 
                 {/* Descripción */}
+                  {/* Organizadores asignados */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('userMenu.organizadores')}</label>
+                    <div className="flex flex-col gap-2">
+                      {availableOrganizers.length === 0 ? (
+                        <p className="text-sm text-gray-500">{t('admin.noOrganizadoresDisponibles', 'No hay organizadores disponibles. Agrega usuarios con rol "organizer".')}</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {availableOrganizers.map(org => (
+                            <label key={org.email} className="inline-flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 text-sm">
+                              <input type="checkbox" checked={Array.isArray(formData.organizers) && formData.organizers.includes(org.email)} onChange={(e) => handleOrganizersChange(org.email, e.target.checked)} />
+                              <span className="ml-1">{org.nombre} <span className="text-xs text-gray-500">({org.email})</span></span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('admin.descripcion')} *

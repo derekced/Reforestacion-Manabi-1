@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import { X, User, Mail, Phone, Calendar, MessageSquare, AlertCircle, CheckCircle2 } from 'lucide-react';
 import ConfirmModal from '../ui/ConfirmModal';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function FormularioUnirseEvento({ evento, isOpen, onClose }) {
+  const { t } = useLanguage();
   const [user, setUser] = useState(null);
   const [formData, setFormData] = useState({
     nombre: '',
@@ -194,7 +196,7 @@ export default function FormularioUnirseEvento({ evento, isOpen, onClose }) {
           <div className="flex items-start justify-between">
             <div>
               <h2 className="text-2xl font-bold mb-2">
-                Únete al Proyecto
+                {t('modal.registroProyecto')}
               </h2>
               <p className="text-green-100 text-sm font-medium">
                 {evento.nombre}
@@ -216,8 +218,8 @@ export default function FormularioUnirseEvento({ evento, isOpen, onClose }) {
             <div className="flex items-center gap-3 text-green-800 dark:text-green-200">
               <CheckCircle2 className="shrink-0" size={24} />
               <div>
-                <p className="font-semibold">¡Registro exitoso!</p>
-                <p className="text-sm">Te has unido al proyecto. Recibirás más información pronto.</p>
+                <p className="font-semibold">{t('modal.registroExitoso')}</p>
+                <p className="text-sm">{t('modal.mensajeExito')}</p>
               </div>
             </div>
           </div>
@@ -432,13 +434,14 @@ export default function FormularioUnirseEvento({ evento, isOpen, onClose }) {
 
           {/* Botones */}
           <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-4">
             <button
               type="button"
               onClick={handleClose}
               className="flex-1 px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium transition-colors"
               disabled={isSubmitting}
             >
-              Cancelar
+              {t('modal.volver')}
             </button>
             <button
               type="submit"
@@ -448,12 +451,13 @@ export default function FormularioUnirseEvento({ evento, isOpen, onClose }) {
               {isSubmitting ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Procesando...
+                  {t('modal.registrando')}
                 </>
               ) : (
-                'Confirmar Registro'
+                t('modal.confirmarRegistro')
               )}
             </button>
+          </div>
           </div>
         </form>
       </div>

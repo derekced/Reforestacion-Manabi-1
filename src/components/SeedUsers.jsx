@@ -36,10 +36,11 @@ export default function SeedUsers() {
           email: "usuario@example.com",
           telefono: "0993333333",
           ciudad: "Jipijapa",
-          role: "user",
+          role: "volunteer",
           password: "password123",
           fechaRegistro: new Date().toISOString(),
         },
+        
         {
           nombre: "Lucía Gómez",
           email: "organizer3@example.com",

@@ -19,7 +19,7 @@ export default function RegisterForm({ onBack }) {
     organizationName: "",
     organizationWebsite: "",
     terminos: false,
-    role: "user", // 'user' or 'volunteer'
+    role: "volunteer", // 'volunteer' or 'organizer'
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -81,7 +81,7 @@ export default function RegisterForm({ onBack }) {
     }
 
     // role validation
-    if (!['user','volunteer','organizer'].includes(form.role)) {
+    if (!['volunteer','organizer'].includes(form.role)) {
       setError('Rol inválido');
       return;
     }
@@ -273,16 +273,12 @@ export default function RegisterForm({ onBack }) {
         <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">¿Te registras como:</span>
         <div className="flex gap-4">
           <label className="inline-flex items-center gap-2">
-            <input type="radio" name="role" value="user" checked={form.role === 'user'} onChange={handleChange} />
-            <span className="text-sm">Usuario común</span>
-          </label>
-          <label className="inline-flex items-center gap-2">
             <input type="radio" name="role" value="volunteer" checked={form.role === 'volunteer'} onChange={handleChange} />
             <span className="text-sm">Voluntariado</span>
           </label>
           <label className="inline-flex items-center gap-2">
             <input type="radio" name="role" value="organizer" checked={form.role === 'organizer'} onChange={handleChange} />
-            <span className="text-sm">Organizador</span>
+            <span className="text-sm">{t('userMenu.organizador')}</span>
           </label>
         </div>
       </div>

@@ -60,15 +60,15 @@ export function AppSidebar({ ...props }) {
       },
     ] : [];
 
-    // Items para organizadores y administradores
-    const controlItems = user && (user.role === 'organizer' || user.role === 'admin') ? [
+    // Items para organizadores
+    const controlItems = user && user.role === 'organizer' ? [
       {
-        title: "Control",
+        title: t('common.control'),
         url: "/control",
         icon: UserCheck,
       },
       {
-        title: "Solicitar Proyecto",
+        title: t('common.requestProject'),
         url: "/proyectos/peticion",
         icon: Trees,
       },
@@ -77,12 +77,12 @@ export function AppSidebar({ ...props }) {
     // Items solo para administradores
     const adminItems = user && user.role === 'admin' ? [
       {
-        title: "Admin",
+        title: t('common.admin'),
         url: "/admin",
         icon: Settings,
       },
       {
-        title: "Peticiones",
+        title: t('common.requests'),
         url: "/admin/peticiones",
         icon: Trees,
       },

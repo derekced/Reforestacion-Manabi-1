@@ -12,7 +12,7 @@ const getProyectos = () => {
   if (typeof window === 'undefined') return [];
   
   const savedProjects = localStorage.getItem('proyectos');
-  if (savedProjects) {
+    if (savedProjects) {
     const projects = JSON.parse(savedProjects);
     // Convertir al formato esperado por el mapa
     return projects.map(p => ({
@@ -23,15 +23,17 @@ const getProyectos = () => {
       fecha: p.fecha,
       arboles: parseInt(p.arboles),
       voluntarios: parseInt(p.voluntarios),
-      especies: p.especies.split(',').map(e => e.trim()),
+      especies: (p.especies || '').split(',').map(e => e.trim()),
       descripcion: p.descripcion,
       estado: p.estado,
-      ubicacion: p.ubicacion
+      ubicacion: p.ubicacion,
+      // Soporte para organizadores (array de emails)
+      organizers: Array.isArray(p.organizers) ? p.organizers : (p.organizers ? String(p.organizers).split(',').map(s=>s.trim()) : [])
     }));
   }
   
   // Datos de ejemplo si no hay proyectos guardados
-  return [
+    return [
     {
       id: '1',
       nombre: "Reforestación Parque Nacional Machalilla",
@@ -43,7 +45,8 @@ const getProyectos = () => {
       especies: ['Guayacán', 'Ceibo', 'Fernán Sánchez'],
       fecha: '2025-02-15',
       estado: 'Próximo',
-      descripcion: 'Recuperación de bosque seco tropical en el Parque Nacional Machalilla'
+      descripcion: 'Recuperación de bosque seco tropical en el Parque Nacional Machalilla',
+      organizers: ['organizer1@example.com']
     },
     {
       id: '2',
@@ -56,7 +59,8 @@ const getProyectos = () => {
       especies: ['Neem', 'Almendro', 'Laurel'],
       fecha: '2025-01-20',
       estado: 'Activo',
-      descripcion: 'Creación de bosque urbano en la zona costera de Manta'
+      descripcion: 'Creación de bosque urbano en la zona costera de Manta',
+      organizers: []
     }
   ];
 };
@@ -284,6 +288,8 @@ function MapaProyectos() {
 export default MapaProyectos;
 
 function JoinButton({ evento, onOpenForm }) {
+  const { t } = useLanguage();
+
   const handleJoin = () => {
     // Verificar si el usuario está autenticado
     const authRaw = localStorage.getItem('authUser') || sessionStorage.getItem('authUser');
@@ -298,12 +304,12 @@ function JoinButton({ evento, onOpenForm }) {
       const user = JSON.parse(authRaw);
       // Los administradores no pueden registrarse en proyectos
       if (user.role === 'admin') {
-        alert('Los administradores no pueden registrarse en proyectos. Puedes gestionar los proyectos desde el panel de administración.');
+        alert(t('userMenu.adminCannotRegister'));
         return;
       }
       // Los organizadores pueden crear proyectos, pero no registrarse como voluntarios
       if (user.role === 'organizer') {
-        alert('Los organizadores pueden crear y gestionar proyectos, pero no registrarse como voluntarios.');
+        alert(t('userMenu.organizerCannotRegister'));
         return;
       }
       // Verificar si ya está registrado
@@ -311,7 +317,7 @@ function JoinButton({ evento, onOpenForm }) {
       const regs = JSON.parse(regsRaw);
       const exists = regs.find(r => r.evento && r.evento.id === evento.id && r.userEmail === user.email);
       if (exists) {
-        alert('Ya estás registrado en este proyecto.');
+        alert(t('userMenu.alreadyRegistered'));
         return;
       }
     } catch (e) {
@@ -326,7 +332,7 @@ function JoinButton({ evento, onOpenForm }) {
       onClick={handleJoin}
       className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
     >
-      Unirse al proyecto
+      {t('modal.registrarse') || 'Unirse al proyecto'}
     </button>
   );
 }

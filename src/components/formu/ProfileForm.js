@@ -2,16 +2,18 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function ProfileForm() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [form, setForm] = useState({
     nombre: "",
     email: "",
     password: "",
     newPassword: "",
     // campos adicionales para organizadores
-    role: "user",
+    role: "volunteer",
     organizationName: "",
     organizationWebsite: "",
   });
@@ -31,7 +33,7 @@ export default function ProfileForm() {
         ...f,
         nombre: user.name || "",
         email: user.email || "",
-        role: user.role || "user",
+        role: user.role || "volunteer",
         organizationName: user.organizationName || "",
         organizationWebsite: user.organizationWebsite || "",
       }));
@@ -56,12 +58,12 @@ export default function ProfileForm() {
     setSuccess("");
 
     if (!isNameValid || !isEmailValid || !isNewPasswordValid) {
-      setError("Por favor corrige los campos marcados.");
+      setError(t('profile.validateFields'));
       return;
     }
 
     if (form.newPassword && !form.password) {
-      setError("Ingresa tu contraseña actual para cambiarla.");
+      setError(t('profile.enterCurrentPassword'));
       return;
     }
 
@@ -76,7 +78,7 @@ export default function ProfileForm() {
         name: form.nombre,
         email: form.email,
         avatar: "/avatars/user.jpg", // mantener avatar existente o usar uno por defecto
-        role: form.role || 'user',
+        role: form.role || 'volunteer',
         organizationName: form.organizationName || undefined,
         organizationWebsite: form.organizationWebsite || undefined,
       };
@@ -93,9 +95,9 @@ export default function ProfileForm() {
         localStorage.setItem('usuarios', JSON.stringify(usuarios));
       } catch(e) {}
       
-      setSuccess("¡Perfil actualizado correctamente!");
+      setSuccess(t('profile.updateSuccess'));
       if (form.newPassword) {
-        setSuccess("¡Perfil y contraseña actualizados correctamente!");
+        setSuccess(t('profile.updatePasswordSuccess'));
       }
       // Limpiar campos de contraseña
       setForm(f => ({ ...f, password: "", newPassword: "" }));
@@ -107,15 +109,15 @@ export default function ProfileForm() {
 
   return (
     <form onSubmit={handleSubmit} className="form-card max-w-md mx-auto p-6 bg-white/80 dark:bg-gray-800 rounded-lg shadow">
-      <h2 className="text-xl font-bold mb-4">Editar Perfil</h2>
+      <h2 className="text-xl font-bold mb-4">{t('profile.editProfile')}</h2>
       
       <div className="space-y-4">
         <label className="block mb-3">
-          <span className="text-sm font-medium text-foreground">Nombre completo</span>
+          <span className="text-sm font-medium text-foreground">{t('profile.fullName')}</span>
           <input
             name="nombre"
             type="text"
-            placeholder="Tu nombre completo"
+            placeholder={t('profile.fullNamePlaceholder')}
             value={form.nombre}
             onChange={handleChange}
             required
@@ -123,16 +125,16 @@ export default function ProfileForm() {
             aria-invalid={!isNameValid}
           />
           <div className="mt-1 text-xs">
-            {!isNameValid && <span className="text-red-500">✕ Nombre requerido</span>}
+            {!isNameValid && <span className="text-red-500">{t('profile.nameRequired')}</span>}
           </div>
         </label>
 
         <label className="block mb-3">
-          <span className="text-sm font-medium text-foreground">Correo electrónico</span>
+          <span className="text-sm font-medium text-foreground">{t('profile.email')}</span>
           <input
             name="email"
             type="email"
-            placeholder="ejemplo@email.com"
+            placeholder={t('profile.emailPlaceholder')}
             value={form.email}
             onChange={handleChange}
             required
@@ -140,37 +142,37 @@ export default function ProfileForm() {
             aria-invalid={!isEmailValid}
           />
           <div className="mt-1 text-xs">
-            {!isEmailValid && form.email && <span className="text-red-500">✕ Email inválido</span>}
+            {!isEmailValid && form.email && <span className="text-red-500">{t('profile.invalidEmail')}</span>}
           </div>
         </label>
 
         {/* Mostrar rol (solo lectura) */}
         <div className="mb-3">
-          <span className="text-sm font-medium text-foreground">Rol</span>
+          <span className="text-sm font-medium text-foreground">{t('profile.role')}</span>
           <div className="mt-1 text-sm text-gray-700 dark:text-gray-300">{form.role}</div>
         </div>
 
         {/* Campos extra para organizadores */}
         {form.role === 'organizer' && (
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-            <h3 className="text-sm font-medium mb-3">Información de organización</h3>
+            <h3 className="text-sm font-medium mb-3">{t('profile.organization')}</h3>
             <label className="block mb-3">
-              <span className="text-sm font-medium text-foreground">Nombre de la organización</span>
+              <span className="text-sm font-medium text-foreground">{t('profile.orgName')}</span>
               <input
                 name="organizationName"
                 type="text"
-                placeholder="Nombre de la organización"
+                placeholder={t('profile.orgNamePlaceholder')}
                 value={form.organizationName}
                 onChange={handleChange}
                 className="mt-1 block w-full rounded border px-3 py-2 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </label>
             <label className="block mb-3">
-              <span className="text-sm font-medium text-foreground">Sitio web</span>
+              <span className="text-sm font-medium text-foreground">{t('profile.website')}</span>
               <input
                 name="organizationWebsite"
                 type="url"
-                placeholder="https://..."
+                placeholder={t('profile.websitePlaceholder')}
                 value={form.organizationWebsite}
                 onChange={handleChange}
                 className="mt-1 block w-full rounded border px-3 py-2 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -180,14 +182,14 @@ export default function ProfileForm() {
         )}
 
         <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-          <h3 className="text-sm font-medium mb-3">Cambiar contraseña (opcional)</h3>
+          <h3 className="text-sm font-medium mb-3">{t('profile.changePassword')}</h3>
           
           <label className="block mb-3">
-            <span className="text-sm font-medium text-foreground">Contraseña actual</span>
+            <span className="text-sm font-medium text-foreground">{t('profile.currentPassword')}</span>
             <input
               name="password"
               type="password"
-              placeholder="Requerida para cambiar contraseña"
+              placeholder={t('profile.currentPasswordPlaceholder')}
               value={form.password}
               onChange={handleChange}
               className="mt-1 block w-full rounded border px-3 py-2 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -195,18 +197,18 @@ export default function ProfileForm() {
           </label>
 
           <label className="block mb-3">
-            <span className="text-sm font-medium text-foreground">Nueva contraseña</span>
+            <span className="text-sm font-medium text-foreground">{t('profile.newPassword')}</span>
             <input
               name="newPassword"
               type="password"
-              placeholder="Mínimo 6 caracteres"
+              placeholder={t('profile.newPasswordPlaceholder')}
               value={form.newPassword}
               onChange={handleChange}
               className="mt-1 block w-full rounded border px-3 py-2 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               aria-invalid={!isNewPasswordValid}
             />
             <div className="mt-1 text-xs">
-              {form.newPassword && !isNewPasswordValid && <span className="text-red-500">✕ Mínimo 6 caracteres</span>}
+              {form.newPassword && !isNewPasswordValid && <span className="text-red-500">{t('profile.minChars')}</span>}
             </div>
           </label>
         </div>
@@ -221,14 +223,14 @@ export default function ProfileForm() {
           disabled={loading}
           className="px-4 py-2 rounded bg-green-700 text-white"
         >
-          {loading ? "Guardando..." : "Guardar cambios"}
+          {loading ? t('common.saving') : t('profile.saveChanges')}
         </button>
         <button
           type="button"
           onClick={() => router.back()}
           className="px-4 py-2 rounded bg-white/60 dark:bg-gray-700 text-foreground"
         >
-          Cancelar
+          {t('profile.cancel')}
         </button>
       </div>
     </form>

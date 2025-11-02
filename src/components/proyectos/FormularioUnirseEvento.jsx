@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, User, Mail, Phone, Calendar, MessageSquare, AlertCircle, CheckCircle2 } from 'lucide-react';
+import ConfirmModal from '../ui/ConfirmModal';
 
 export default function FormularioUnirseEvento({ evento, isOpen, onClose }) {
   const [user, setUser] = useState(null);
@@ -84,32 +85,31 @@ export default function FormularioUnirseEvento({ evento, isOpen, onClose }) {
     }
   };
 
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState(false);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-    
-    setIsSubmitting(true);
+    if (!validateForm()) return;
+    setConfirmModalOpen(true);
+    setPendingSubmit(true);
+  };
 
+  const doSubmit = async () => {
+    setIsSubmitting(true);
+    setConfirmModalOpen(false);
+    setPendingSubmit(false);
     try {
-      // Obtener registros existentes
       const registrosRaw = localStorage.getItem('eventRegistrations') || '[]';
       const registros = JSON.parse(registrosRaw);
-      
-      // Verificar si ya está registrado
       const yaRegistrado = registros.find(
         r => r.evento && r.evento.id === evento.id && r.userEmail === formData.email
       );
-      
       if (yaRegistrado) {
         setErrors({ general: 'Ya estás registrado en este evento' });
         setIsSubmitting(false);
         return;
       }
-      
-      // Crear nuevo registro
       const nuevoRegistro = {
         id: `${evento.id}-${formData.email}-${Date.now()}`,
         evento: {
@@ -136,19 +136,11 @@ export default function FormularioUnirseEvento({ evento, isOpen, onClose }) {
         estado: 'confirmado',
         fechaRegistro: new Date().toISOString()
       };
-      
-      // Guardar en localStorage
       registros.push(nuevoRegistro);
       localStorage.setItem('eventRegistrations', JSON.stringify(registros));
-      
-      // Notificar cambios
       globalThis.window.dispatchEvent(new Event('registrationChange'));
       globalThis.window.dispatchEvent(new Event('storage'));
-      
-      // Mostrar éxito
       setShowSuccess(true);
-      
-      // Mostrar toast
       try {
         globalThis.window.dispatchEvent(new CustomEvent('app:toast', {
           detail: {
@@ -159,17 +151,13 @@ export default function FormularioUnirseEvento({ evento, isOpen, onClose }) {
       } catch (e) {
         console.error('Error showing toast:', e);
       }
-      
-      // Cerrar después de 2 segundos
       setTimeout(() => {
         handleClose();
       }, 2000);
-      
     } catch (error) {
       console.error('Error al registrar:', error);
       setErrors({ general: 'Error al procesar el registro. Inténtalo de nuevo.' });
     }
-    
     setIsSubmitting(false);
   };
 
@@ -193,6 +181,13 @@ export default function FormularioUnirseEvento({ evento, isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 z-9999 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <ConfirmModal
+        open={confirmModalOpen}
+        title="Confirmar registro"
+        message={`¿Estás seguro que deseas unirte al proyecto "${evento?.nombre}"?`}
+        onConfirm={doSubmit}
+        onCancel={() => { setConfirmModalOpen(false); setPendingSubmit(false); }}
+      />
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-linear-to-r from-green-600 to-green-700 text-white p-6 rounded-t-xl">

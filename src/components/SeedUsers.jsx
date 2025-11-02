@@ -40,6 +40,17 @@ export default function SeedUsers() {
           password: "password123",
           fechaRegistro: new Date().toISOString(),
         },
+        {
+          nombre: "Lucía Gómez",
+          email: "organizer3@example.com",
+          telefono: "0994444444",
+          ciudad: "Chone",
+          role: "organizer",
+          organizationName: "Reforestando Manabí",
+          organizationWebsite: "https://reforestandomanabi.example",
+          password: "password123",
+          fechaRegistro: new Date().toISOString(),
+        },
       ];
 
       let changed = false;

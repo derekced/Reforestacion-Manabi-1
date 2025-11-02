@@ -16,6 +16,8 @@ export default function RegisterForm({ onBack }) {
     confirmPassword: "",
     telefono: "",
     ciudad: "",
+    organizationName: "",
+    organizationWebsite: "",
     terminos: false,
     role: "user", // 'user' or 'volunteer'
   });
@@ -79,9 +81,17 @@ export default function RegisterForm({ onBack }) {
     }
 
     // role validation
-    if (!['user','volunteer'].includes(form.role)) {
+    if (!['user','volunteer','organizer'].includes(form.role)) {
       setError('Rol inválido');
       return;
+    }
+
+    // if organizer, require organization details
+    if (form.role === 'organizer') {
+      if (!form.organizationName || !form.organizationName.trim()) {
+        setError('Nombre de la organización es requerido');
+        return;
+      }
     }
 
     setLoading(true);
@@ -105,6 +115,8 @@ export default function RegisterForm({ onBack }) {
         telefono: form.telefono,
         ciudad: form.ciudad,
         role: form.role,
+        organizationName: form.organizationName || undefined,
+        organizationWebsite: form.organizationWebsite || undefined,
         password: form.password, // En producción, esto debe estar hasheado
         fechaRegistro: new Date().toISOString(),
       };
@@ -268,8 +280,41 @@ export default function RegisterForm({ onBack }) {
             <input type="radio" name="role" value="volunteer" checked={form.role === 'volunteer'} onChange={handleChange} />
             <span className="text-sm">Voluntariado</span>
           </label>
+          <label className="inline-flex items-center gap-2">
+            <input type="radio" name="role" value="organizer" checked={form.role === 'organizer'} onChange={handleChange} />
+            <span className="text-sm">Organizador</span>
+          </label>
         </div>
       </div>
+
+      {/* Campos para organizador */}
+      {form.role === 'organizer' && (
+        <>
+          <label className="block mb-4">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre de la organización</span>
+            <input
+              name="organizationName"
+              type="text"
+              placeholder="Verde Manabí"
+              value={form.organizationName}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-xl border border-gray-300 dark:border-gray-600 px-4 py-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+            />
+          </label>
+
+          <label className="block mb-4">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sitio web de la organización (opcional)</span>
+            <input
+              name="organizationWebsite"
+              type="url"
+              placeholder="https://miorganizacion.example"
+              value={form.organizationWebsite}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-xl border border-gray-300 dark:border-gray-600 px-4 py-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+            />
+          </label>
+        </>
+      )}
 
       {/* Términos */}
       <label className="flex items-start gap-3 mb-6 cursor-pointer">

@@ -10,6 +10,7 @@ import {
   Users,
   LogOut,
   UserCheck,
+  Trees,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import WidgetImpacto from "@/components/WidgetImpacto";
@@ -58,7 +59,21 @@ export function AppSidebar({ ...props }) {
         icon: BarChart3,
       },
     ] : [];
-    
+
+    // Items para organizadores y administradores
+    const controlItems = user && (user.role === 'organizer' || user.role === 'admin') ? [
+      {
+        title: "Control",
+        url: "/control",
+        icon: UserCheck,
+      },
+      {
+        title: "Solicitar Proyecto",
+        url: "/proyectos/peticion",
+        icon: Trees,
+      },
+    ] : [];
+
     // Items solo para administradores
     const adminItems = user && user.role === 'admin' ? [
       {
@@ -67,9 +82,9 @@ export function AppSidebar({ ...props }) {
         icon: Settings,
       },
       {
-        title: t('gestionVoluntarios.titulo'),
-        url: "/voluntarios",
-        icon: UserCheck,
+        title: "Peticiones",
+        url: "/admin/peticiones",
+        icon: Trees,
       },
     ] : [];
 
@@ -87,7 +102,7 @@ export function AppSidebar({ ...props }) {
       },
     ];
 
-    return [...baseItems, ...(user ? [...userItems, ...adminItems] : authItems)];
+    return [...baseItems, ...(user ? [...userItems, ...controlItems, ...adminItems] : authItems)];
   };
 
   React.useEffect(() => {

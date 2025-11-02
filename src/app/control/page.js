@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthRequired from '@/components/AuthRequired';
 
-export default function VoluntariosPage() {
+export default function ControlPage() {
   const [allowed, setAllowed] = useState(null); // null = loading, true = allowed, false = not allowed
   const router = useRouter();
 
@@ -21,7 +21,6 @@ export default function VoluntariosPage() {
       if (user.role === 'organizer' || user.role === 'admin') {
         setAllowed(true);
       } else {
-        // not allowed for other roles
         setAllowed(false);
         router.push('/');
       }
@@ -40,7 +39,6 @@ export default function VoluntariosPage() {
   }
 
   if (allowed === false) {
-    // If not logged in, show auth required; otherwise we've already redirected
     const u = localStorage.getItem('authUser') || sessionStorage.getItem('authUser');
     if (!u) return <AuthRequired />;
     return null;

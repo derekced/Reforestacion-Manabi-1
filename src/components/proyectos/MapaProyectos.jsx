@@ -296,17 +296,19 @@ function JoinButton({ evento, onOpenForm }) {
     // Verificar si el usuario es administrador
     try {
       const user = JSON.parse(authRaw);
-      
       // Los administradores no pueden registrarse en proyectos
       if (user.role === 'admin') {
         alert('Los administradores no pueden registrarse en proyectos. Puedes gestionar los proyectos desde el panel de administración.');
         return;
       }
-      
+      // Los organizadores pueden crear proyectos, pero no registrarse como voluntarios
+      if (user.role === 'organizer') {
+        alert('Los organizadores pueden crear y gestionar proyectos, pero no registrarse como voluntarios.');
+        return;
+      }
       // Verificar si ya está registrado
       const regsRaw = localStorage.getItem('eventRegistrations') || '[]';
       const regs = JSON.parse(regsRaw);
-
       const exists = regs.find(r => r.evento && r.evento.id === evento.id && r.userEmail === user.email);
       if (exists) {
         alert('Ya estás registrado en este proyecto.');
@@ -315,7 +317,6 @@ function JoinButton({ evento, onOpenForm }) {
     } catch (e) {
       console.error('Error checking registration:', e);
     }
-    
     // Abrir el formulario
     onOpenForm();
   };

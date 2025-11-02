@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Users, Search, Mail, Phone, Calendar, Award, X, FileText, MapPin } from 'lucide-react';
+import { Users, Search, Mail, Phone, Calendar, Award, X, FileText, MapPin, Trash, CheckCircle } from 'lucide-react';
+import ConfirmModal from './ui/ConfirmModal';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function GestionVoluntarios() {
@@ -56,6 +57,57 @@ export default function GestionVoluntarios() {
       setProyectoSeleccionado(proyecto);
     } catch (error) {
       console.error('Error al cargar voluntarios:', error);
+    }
+  };
+
+  const [confirmState, setConfirmState] = useState({ open: false, id: null });
+
+  const persistRegistrations = (newRegs) => {
+    try {
+      localStorage.setItem('eventRegistrations', JSON.stringify(newRegs));
+      // notify other windows/components
+      globalThis.window.dispatchEvent(new Event('registrationChange'));
+      // update local state
+      if (proyectoSeleccionado) {
+        const regsForProject = newRegs.filter(r => r.evento?.id === proyectoSeleccionado.id);
+        setVoluntarios(regsForProject);
+      } else {
+        setVoluntarios(newRegs);
+      }
+    } catch (e) {
+      console.error('Error al persistir registros:', e);
+    }
+  };
+
+  const toggleAttendance = (registrationId) => {
+    try {
+      const data = localStorage.getItem('eventRegistrations');
+      const regs = data ? JSON.parse(data) : [];
+      const idx = regs.findIndex(r => r.id === registrationId);
+      if (idx === -1) return;
+      regs[idx].attended = !regs[idx].attended;
+      persistRegistrations(regs);
+    } catch (e) {
+      console.error('Error al cambiar asistencia:', e);
+    }
+  };
+
+  const removeVoluntario = (registrationId) => {
+    setConfirmState({ open: true, id: registrationId });
+  };
+
+  const handleConfirmRemove = () => {
+    try {
+      const registrationId = confirmState.id;
+      const data = localStorage.getItem('eventRegistrations');
+      const regs = data ? JSON.parse(data) : [];
+      const newRegs = regs.filter(r => r.id !== registrationId);
+      persistRegistrations(newRegs);
+      if (voluntarioDetalle?.id === registrationId) setVoluntarioDetalle(null);
+    } catch (e) {
+      console.error('Error al eliminar voluntario:', e);
+    } finally {
+      setConfirmState({ open: false, id: null });
     }
   };
 
@@ -264,13 +316,40 @@ export default function GestionVoluntarios() {
                           )}
                         </div>
 
-                        <button
-                          onClick={() => setVoluntarioDetalle(voluntario)}
-                          className="ml-4 p-2 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors"
-                          title={t('gestionVoluntarios.verDetalle')}
-                        >
-                          <FileText className="w-5 h-5" />
-                        </button>
+                        <div className="ml-4 flex items-center gap-2">
+                          {/* Attendance badge / toggle */}
+                          {voluntario.attended ? (
+                            <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-1 rounded-full text-xs">
+                              <CheckCircle className="w-4 h-4" />
+                              {t('gestionVoluntarios.asistio') || 'Asistió'}
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => toggleAttendance(voluntario.id)}
+                              className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300 px-2 py-1 rounded-full text-xs hover:brightness-95 transition"
+                              title={t('gestionVoluntarios.marcarAsistencia') || 'Marcar asistencia'}
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                              {t('gestionVoluntarios.marcar') || 'Marcar'}
+                            </button>
+                          )}
+
+                          <button
+                            onClick={() => removeVoluntario(voluntario.id)}
+                            className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                            title={t('gestionVoluntarios.remover')}
+                          >
+                            <Trash className="w-4 h-4" />
+                          </button>
+
+                          <button
+                            onClick={() => setVoluntarioDetalle(voluntario)}
+                            className="p-2 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors"
+                            title={t('gestionVoluntarios.verDetalle')}
+                          >
+                            <FileText className="w-5 h-5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))
@@ -302,7 +381,7 @@ export default function GestionVoluntarios() {
       {voluntarioDetalle && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-linear-to-r from-purple-600 to-indigo-600 dark:from-purple-700 dark:to-indigo-700 text-white p-6 rounded-t-xl flex items-center justify-between">
+              <div className="sticky top-0 bg-linear-to-r from-purple-600 to-indigo-600 dark:from-purple-700 dark:to-indigo-700 text-white p-6 rounded-t-xl flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="bg-white/20 p-2 rounded-lg">
                   <Award className="w-6 h-6" />
@@ -312,12 +391,41 @@ export default function GestionVoluntarios() {
                   <p className="text-purple-100 text-sm">{t('gestionVoluntarios.detalleCompleto')}</p>
                 </div>
               </div>
-              <button
-                onClick={() => setVoluntarioDetalle(null)}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Toggle attendance in modal */}
+                {voluntarioDetalle.attended ? (
+                  <button
+                    onClick={() => toggleAttendance(voluntarioDetalle.id)}
+                    className="inline-flex items-center gap-2 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-3 py-1 rounded-lg text-sm"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    {t('gestionVoluntarios.quitarAsistencia') || 'Quitar asistencia'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => toggleAttendance(voluntarioDetalle.id)}
+                    className="inline-flex items-center gap-2 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300 px-3 py-1 rounded-lg text-sm"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    {t('gestionVoluntarios.marcarAsistencia') || 'Marcar asistencia'}
+                  </button>
+                )}
+
+                <button
+                  onClick={() => removeVoluntario(voluntarioDetalle.id)}
+                  className="inline-flex items-center gap-2 bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300 px-3 py-1 rounded-lg text-sm"
+                >
+                  <Trash className="w-4 h-4" />
+                  {t('gestionVoluntarios.remover')}
+                </button>
+
+                <button
+                  onClick={() => setVoluntarioDetalle(null)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             <div className="p-6 space-y-4">
@@ -410,6 +518,14 @@ export default function GestionVoluntarios() {
           </div>
         </div>
       )}
+    {/* Modal de confirmación para eliminar voluntario */}
+    <ConfirmModal
+      open={confirmState.open}
+      title={t('gestionVoluntarios.titulo') || 'Gestión de Voluntarios'}
+      message={t('gestionVoluntarios.confirmRemove') || '¿Eliminar voluntario?'}
+      onConfirm={handleConfirmRemove}
+      onCancel={() => setConfirmState({ open: false, id: null })}
+    />
     </div>
   );
 }

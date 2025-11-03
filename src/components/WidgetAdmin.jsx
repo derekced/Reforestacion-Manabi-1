@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Trees, Calendar, Users } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { cargarProyectos } from '@/lib/proyectosUtils';
 
 export default function WidgetAdmin() {
   const { t } = useLanguage();
@@ -30,9 +31,8 @@ export default function WidgetAdmin() {
 
   const cargarEstadisticas = () => {
     try {
-      const proyectosData = localStorage.getItem('proyectos');
-      if (proyectosData) {
-        const proyectos = JSON.parse(proyectosData);
+      const proyectos = cargarProyectos();
+      if (proyectos && proyectos.length > 0) {
         const activos = proyectos.filter(p => p.estado === 'Activo').length;
         
         // Calcular total de voluntarios sumando de todos los proyectos

@@ -29,7 +29,7 @@ export default function AdminPeticionesPage() {
       voluntarios: peticion.voluntarios,
       especies: peticion.especies,
       descripcion: peticion.descripcion,
-      estado: 'Próximo',
+      estado: 'upcoming', // Guardar en inglés
     });
     localStorage.setItem('proyectos', JSON.stringify(proyectos));
     // Eliminar petición

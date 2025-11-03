@@ -9,8 +9,19 @@ export default function AuthRequired() {
   const { t } = useLanguage();
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-green-50 via-blue-50 to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="max-w-md w-full">
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">
+      {/* Imagen de fondo */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: `url('/plant-watering-reforestation.jpg')`,
+        }}
+      >
+        {/* Overlay oscuro para mejorar legibilidad */}
+        <div className="absolute inset-0 bg-black/50 dark:bg-black/65"></div>
+      </div>
+
+      <div className="max-w-md w-full relative z-10">
         {/* Card principal */}
         <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-8 border border-gray-200 dark:border-gray-700">
           {/* Icono */}

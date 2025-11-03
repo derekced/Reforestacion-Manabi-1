@@ -6,14 +6,7 @@ import ToastContainer from "@/components/ui/Toast";
 import Footer from "@/components/Footer";
 import { ThemeProvider } from "@/components/theme-provider";
 import { LanguageProvider } from "@/contexts/LanguageContext";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+import DynamicBreadcrumb from "@/components/DynamicBreadcrumb";
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
@@ -61,19 +54,7 @@ export default function RootLayout({ children }) {
                       orientation="vertical"
                       className="mr-2 shrink-0 data-[orientation=vertical]:h-4"
                     />
-                    <Breadcrumb className="overflow-hidden">
-                      <BreadcrumbList>
-                        <BreadcrumbItem className="hidden md:block">
-                          <BreadcrumbLink href="#">
-                            Reforesta Manabí
-                          </BreadcrumbLink>
-                        </BreadcrumbItem>
-                        <BreadcrumbSeparator className="hidden md:block" />
-                        <BreadcrumbItem>
-                          <BreadcrumbPage>Inicio</BreadcrumbPage>
-                        </BreadcrumbItem>
-                      </BreadcrumbList>
-                    </Breadcrumb>
+                    <DynamicBreadcrumb />
                   </div>
                 </header>
                 <div className="flex flex-col min-h-[calc(100vh-4rem)]">

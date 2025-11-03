@@ -6,34 +6,24 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useLanguage } from '@/contexts/LanguageContext';
 import FormularioUnirseEvento from './FormularioUnirseEvento';
+import { cargarProyectos, obtenerColoresEstado } from '@/lib/proyectosUtils';
+import { Calendar, Trees, Users, Leaf } from 'lucide-react';
 
 // Función para cargar proyectos desde localStorage
 const getProyectos = () => {
-  if (typeof window === 'undefined') return [];
+  // Verificar si localStorage tiene la clave 'proyectos'
+  const savedData = localStorage.getItem('proyectos');
   
-  const savedProjects = localStorage.getItem('proyectos');
-    if (savedProjects) {
-    const projects = JSON.parse(savedProjects);
-    // Convertir al formato esperado por el mapa
-    return projects.map(p => ({
-      id: p.id,
-      nombre: p.nombre,
-      lat: parseFloat(p.lat),
-      lng: parseFloat(p.lng),
-      fecha: p.fecha,
-      arboles: parseInt(p.arboles),
-      voluntarios: parseInt(p.voluntarios),
-      especies: (p.especies || '').split(',').map(e => e.trim()),
-      descripcion: p.descripcion,
-      estado: p.estado,
-      ubicacion: p.ubicacion,
-      // Soporte para organizadores (array de emails)
-      organizers: Array.isArray(p.organizers) ? p.organizers : (p.organizers ? String(p.organizers).split(',').map(s=>s.trim()) : [])
-    }));
+  if (savedData !== null) {
+    // Si existe, cargar lo que haya (puede ser un array vacío)
+    const proyectos = cargarProyectos();
+    console.log('📍 Cargando proyectos para el mapa:', proyectos.length, 'proyectos encontrados');
+    return proyectos;
   }
   
-  // Datos de ejemplo si no hay proyectos guardados
-    return [
+  // Solo crear datos de ejemplo si nunca se ha inicializado localStorage
+  console.log('⚠️ Primera vez: usando datos de ejemplo en el mapa');
+  return [
     {
       id: '1',
       nombre: "Reforestación Parque Nacional Machalilla",
@@ -67,13 +57,7 @@ const getProyectos = () => {
 
 // Iconos personalizados para los marcadores según estado
 const createCustomIcon = (estado) => {
-  const colorMap = {
-    'Completado': '#10b981', // verde
-    'Activo': '#3b82f6',      // azul
-    'Próximo': '#f59e0b'      // naranja
-  };
-  
-  const color = colorMap[estado] || '#6b7280';
+  const color = obtenerColoresEstado(estado).marker;
   
   return L.divIcon({
     className: 'custom-marker',
@@ -119,6 +103,7 @@ function MapaProyectos() {
     
     // Escuchar cambios en localStorage
     const handleStorageChange = () => {
+      console.log('🗺️ Actualizando mapa de proyectos...');
       setEventosReforestacion(getProyectos());
     };
     
@@ -127,9 +112,13 @@ function MapaProyectos() {
     // Recargar cuando la página está enfocada (para detectar cambios del admin)
     window.addEventListener('focus', handleStorageChange);
     
+    // Escuchar evento personalizado cuando se actualizan proyectos
+    window.addEventListener('projectsUpdated', handleStorageChange);
+    
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('focus', handleStorageChange);
+      window.removeEventListener('projectsUpdated', handleStorageChange);
     };
   }, []);
   
@@ -207,42 +196,45 @@ function MapaProyectos() {
                   </h3>
                   
                   <div className="mb-3">
-                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                      evento.estado === 'Completado' ? 'bg-green-100 text-green-800' :
-                      evento.estado === 'Activo' ? 'bg-blue-100 text-blue-800' :
-                      'bg-orange-100 text-orange-800'
-                    }`}>
-                      {evento.estado}
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold shadow-sm ${obtenerColoresEstado(evento.estado).badge}`}>
+                      <span className="text-base">{obtenerColoresEstado(evento.estado).icon}</span>
+                      <span>{evento.estado}</span>
                     </span>
                   </div>
 
-                  <p className="text-sm text-gray-700 mb-3">
+                  <p className="text-sm text-gray-800 mb-3">
                     {evento.descripcion}
                   </p>
 
                   <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">📅 {t('mapaProyectos.fecha')}</span>
+                    <div className="flex items-center gap-2 text-gray-900">
+                      <Calendar className="w-4 h-4 text-blue-600" />
+                      <span className="font-semibold">{t('mapaProyectos.fecha')}:</span>
                       <span>{evento.fecha}</span>
                     </div>
                     
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">🌳 {t('mapaProyectos.arboles')}</span>
+                    <div className="flex items-center gap-2 text-gray-900">
+                      <Trees className="w-4 h-4 text-green-600" />
+                      <span className="font-semibold">{t('mapaProyectos.arboles')}:</span>
                       <span>{evento.arboles.toLocaleString()}</span>
                     </div>
                     
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">👥 {t('mapaProyectos.voluntarios')}</span>
+                    <div className="flex items-center gap-2 text-gray-900">
+                      <Users className="w-4 h-4 text-purple-600" />
+                      <span className="font-semibold">{t('mapaProyectos.voluntarios')}:</span>
                       <span>{evento.voluntarios}</span>
                     </div>
                     
                     <div className="mt-2">
-                      <span className="font-semibold">🌿 {t('mapaProyectos.especies')}</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Leaf className="w-4 h-4 text-emerald-600" />
+                        <span className="font-semibold text-gray-900">{t('mapaProyectos.especies')}:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1 ml-6">
                         {evento.especies.map((especie, idx) => (
                           <span
                             key={idx}
-                            className="bg-green-50 text-green-700 px-2 py-0.5 rounded text-xs"
+                            className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-medium"
                           >
                             {especie}
                           </span>
@@ -330,9 +322,10 @@ function JoinButton({ evento, onOpenForm }) {
   return (
     <button
       onClick={handleJoin}
-      className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-700 hover:bg-green-800 text-white rounded-lg text-sm font-bold transition-colors shadow-lg hover:shadow-xl border border-green-800"
     >
-      {t('modal.registrarse') || 'Unirse al proyecto'}
+      <Users className="w-4 h-4 stroke-[2.5]" />
+      <span className="text-white">{t('modal.registrarse') || 'Register'}</span>
     </button>
   );
 }

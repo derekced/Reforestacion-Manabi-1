@@ -303,33 +303,39 @@ export default function MisProyectos() {
                     year: 'numeric'
                   })}
                 </div>
-                <div className="flex gap-2">
-                  {/* Botón de registrar asistencia */}
-                  {!getAsistencia(registro.evento.id) && (
+                {registro.evento.estado !== 'Completado' ? (
+                  <div className="flex gap-2">
+                    {/* Botón de registrar asistencia */}
+                    {!getAsistencia(registro.evento.id) && (
+                      <button
+                        onClick={() => handleRegistrarAsistencia(registro)}
+                        className="px-4 py-2 bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400 rounded-lg font-medium transition-colors text-sm flex items-center gap-2"
+                      >
+                        <CheckCircle className="w-4 h-4" strokeWidth={2.5} />
+                        {t('misProyectos.registrarAsistencia')}
+                      </button>
+                    )}
+                    {getAsistencia(registro.evento.id) && (
+                      <button
+                        onClick={() => handleRegistrarAsistencia(registro)}
+                        className="px-4 py-2 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-400 rounded-lg font-medium transition-colors text-sm flex items-center gap-2"
+                      >
+                        <Award className="w-4 h-4" strokeWidth={2.5} />
+                        {t('misProyectos.actualizar')}
+                      </button>
+                    )}
                     <button
-                      onClick={() => handleRegistrarAsistencia(registro)}
-                      className="px-4 py-2 bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400 rounded-lg font-medium transition-colors text-sm flex items-center gap-2"
+                      onClick={() => handleCancelar(registro)}
+                      className="px-4 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400 rounded-lg font-medium transition-colors text-sm"
                     >
-                      <CheckCircle className="w-4 h-4" strokeWidth={2.5} />
-                      {t('misProyectos.registrarAsistencia')}
+                      {t('misProyectos.cancelarRegistro')}
                     </button>
-                  )}
-                  {getAsistencia(registro.evento.id) && (
-                    <button
-                      onClick={() => handleRegistrarAsistencia(registro)}
-                      className="px-4 py-2 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-400 rounded-lg font-medium transition-colors text-sm flex items-center gap-2"
-                    >
-                      <Award className="w-4 h-4" strokeWidth={2.5} />
-                      {t('misProyectos.actualizar')}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleCancelar(registro)}
-                    className="px-4 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400 rounded-lg font-medium transition-colors text-sm"
-                  >
-                    {t('misProyectos.cancelarRegistro')}
-                  </button>
-                </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                    {t('misProyectos.proyectoFinalizado')}
+                  </p>
+                )}
               </div>
             </div>
           </div>

@@ -12,11 +12,11 @@ export default function LoginPage() {
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage: `url('/Blog_Alqueria_Sostenibilidad_reforestacion_d1f8f5ac3d.webp')`,
+          backgroundImage: `url('/plant-watering-reforestation.jpg')`,
         }}
       >
         {/* Overlay oscuro para mejorar legibilidad */}
-        <div className="absolute inset-0 bg-black/40 dark:bg-black/60"></div>
+        <div className="absolute inset-0 bg-black/50 dark:bg-black/65"></div>
       </div>
       
       <main className="relative min-h-screen flex items-center justify-center p-6">

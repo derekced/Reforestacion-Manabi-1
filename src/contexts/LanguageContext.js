@@ -29,43 +29,6 @@ export const translations = {
       requestProject: "Solicitar Proyecto",
     },
 
-    // Admin section translations
-    admin: {
-      titulo: "Panel de Administración",
-      subtitulo: "Administra proyectos de reforestación en Manabí",
-      projectRequests: "Peticiones de Proyectos",
-      noPendingRequests: "No hay peticiones pendientes",
-      viewRequests: "Ver Peticiones",
-      requests: "Peticiones",
-      editButton: "Editar",
-      deleteButton: "Eliminar",
-      confirmDelete: "¿Estás seguro de que deseas eliminar este proyecto?",
-      editProject: "Editar Proyecto",
-      newProject: "Nuevo Proyecto",
-      requestProject: "Solicitar Proyecto",
-      status: "Estado",
-      active: "Activo",
-      statsTitle: "Resumen de Proyectos",
-      totalProjects: "Total de Proyectos",
-      totalVolunteers: "Total de Voluntarios",
-      noProjects: "No Hay Proyectos Aún",
-      noProjectsDesc: "Crea tu primer proyecto para comenzar",
-      location: "Ubicación",
-      trees: "Árboles",
-      volunteers: "Voluntarios",
-      species: "Especies",
-      date: "Fecha",
-      description: "Descripción",
-      organizationInfo: "Información de la Organización",
-      coordinates: "Coordenadas",
-      upcomingStatus: "Próximo",
-      inProgressStatus: "En Progreso",
-      completedStatus: "Completado",
-      saveChanges: "Guardar Cambios",
-      projectName: "Nombre del Proyecto",
-      projectNamePlaceholder: "Ingresa el nombre del proyecto",
-    },
-
     // Profile section
     profile: {
       editProfile: "Editar Perfil",
@@ -176,24 +139,30 @@ export const translations = {
       deleteSuccess: "Proyecto eliminado correctamente",
       saveSuccess: "Proyecto guardado correctamente",
       saveError: "Error al guardar el proyecto",
+      peticiones: "Peticiones",
     },
 
     // Sidebar
     sidebar: {
       inicio: "Inicio",
-      proyectos: "Projects",
-      estadisticas: "Statistics",
-      acceso: "Access",
-      registro: "Register",
-      tuImpacto: "Your Impact",
-      arboles: "trees",
-      faltan: "You need",
-      arbolesParaMeta: "trees for your weekly goal",
-      modoOscuro: "Dark mode",
-      modoClaro: "Light mode", 
+      proyectos: "Proyectos",
+      estadisticas: "Estadísticas",
+      acceso: "Acceso",
+      registro: "Registro",
+      tuImpacto: "Tu Impacto",
+      arboles: "árboles",
+      faltan: "Faltan",
+      arbolesParaMeta: "árboles para tu meta semanal",
+      modoOscuro: "Modo oscuro",
+      modoClaro: "Modo claro", 
       espanol: "Español",
       ingles: "English",
-      acceder: "Sign in",
+      acceder: "Acceder",
+      admin: "Administración",
+      organizer: "Organizador",
+      perfil: "Perfil",
+      control: "Control",
+      voluntarios: "Voluntarios",
     },
     
     // Menú de usuario
@@ -248,6 +217,7 @@ export const translations = {
       hacClicMarcadores: "Haz clic en los marcadores para ver información detallada de cada proyecto",
       cargandoMapa: "Cargando mapa...",
       cargando: "Cargando...",
+      nuevaPeticion: "Nueva Petición de Proyecto",
     },
     
     // Estadísticas
@@ -429,6 +399,7 @@ export const translations = {
       voluntarios: "Voluntarios",
       ubicacion: "Ubicación",
       especies: "Especies",
+      proyectoFinalizado: "Este proyecto ha finalizado. No se pueden realizar cambios.",
       
       // Modal de cancelación
       cancelarTitulo: "¿Cancelar Registro?",
@@ -483,6 +454,27 @@ export const translations = {
       noHayProyectos: "No hay proyectos",
       noHayProyectosDesc: "Comienza agregando tu primer proyecto de reforestación",
       agregarProyecto: "Agregar Proyecto",
+      noProjects: "No Hay Proyectos Aún",
+      noProjectsDesc: "Crea tu primer proyecto para comenzar",
+      saveSuccess: "Proyecto guardado correctamente",
+      deleteSuccess: "Proyecto eliminado correctamente",
+      saveError: "Error al guardar el proyecto",
+      deleteProject: "Eliminar Proyecto",
+      confirmDelete: "¿Estás seguro de que quieres eliminar este proyecto?",
+      cancel: "Cancelar",
+      location: "Ubicación",
+      trees: "Árboles",
+      volunteers: "Voluntarios",
+      species: "Especies",
+      date: "Fecha",
+      description: "Descripción",
+      upcomingStatus: "Próximo",
+      inProgressStatus: "En Progreso",
+      completedStatus: "Completado",
+      projectStatus: "Estado del proyecto",
+      selectLocation: "Seleccionar ubicación",
+      organizadores: "Organizadores",
+      noOrganizersAvailable: "No hay organizadores disponibles. Agrega usuarios con rol organizador.",
       
       // Formulario
       editarProyecto: "Editar Proyecto",
@@ -614,6 +606,11 @@ export const translations = {
       fechaRegistro: "Fecha de registro",
       perfilVoluntario: "Perfil del Voluntario",
       comentarios: "Comentarios adicionales",
+      asistio: "Asistió",
+      marcar: "Marcar",
+      marcarAsistencia: "Marcar asistencia",
+      quitarAsistencia: "Quitar asistencia",
+      remover: "Remover voluntario",
     },
     
     // Footer
@@ -771,6 +768,7 @@ export const translations = {
       deleteSuccess: "Project deleted successfully",
       saveSuccess: "Project saved successfully",
       saveError: "Error saving project",
+      peticiones: "Requests",
     },
 
     // Sidebar
@@ -789,6 +787,11 @@ export const translations = {
       espanol: "Español",
       ingles: "English",
       acceder: "Sign In",
+      admin: "Administration",
+      organizer: "Organizer",
+      perfil: "Profile",
+      control: "Control",
+      voluntarios: "Volunteers",
     },
     
     // User menu
@@ -833,6 +836,7 @@ export const translations = {
       hacClicMarcadores: "Click on markers to see detailed information about each project",
       cargandoMapa: "Loading map...",
       cargando: "Loading...",
+      nuevaPeticion: "New Project Request",
     },
     
     // Statistics
@@ -1014,6 +1018,7 @@ export const translations = {
       voluntarios: "Volunteers",
       ubicacion: "Location",
       especies: "Species",
+      proyectoFinalizado: "This project has ended. No changes can be made.",
       
       // Cancellation modal
       cancelarTitulo: "Cancel Registration?",
@@ -1061,13 +1066,34 @@ export const translations = {
     },
 
     // Admin Panel
-    admin: {
+      admin: {
       titulo: "Administration Panel",
       subtitulo: "Manage reforestation projects in Manabí",
       nuevoProyecto: "New Project",
       noHayProyectos: "No projects",
       noHayProyectosDesc: "Start by adding your first reforestation project",
       agregarProyecto: "Add Project",
+      noProjects: "No Projects Yet",
+      noProjectsDesc: "Create your first project to get started",
+      saveSuccess: "Project saved successfully",
+      deleteSuccess: "Project deleted successfully",
+      saveError: "Error saving project",
+      deleteProject: "Delete Project",
+      confirmDelete: "Are you sure you want to delete this project?",
+      cancel: "Cancel",
+      location: "Location",
+      trees: "Trees",
+      volunteers: "Volunteers",
+      species: "Species",
+      date: "Date",
+      description: "Description",
+      upcomingStatus: "Upcoming",
+      inProgressStatus: "In Progress",
+      completedStatus: "Completed",
+      projectStatus: "Project Status",
+      selectLocation: "Select location",
+      organizadores: "Organizers",
+      noOrganizersAvailable: "No organizers available. Add users with organizer role.",
       
       // Form
       editarProyecto: "Edit Project",
@@ -1098,9 +1124,7 @@ export const translations = {
       guardarCambios: "Save Changes",
       crearProyecto: "Create Project",
       cancelar: "Cancel",
-      confirmarEliminar: "Are you sure you want to delete this project?",
-      
-      // Statistics
+      confirmarEliminar: "Are you sure you want to delete this project?",      // Statistics
       verEstadisticas: "View Statistics",
       estadisticasProyecto: "Project Statistics",
       estadoProyecto: "Project Status",
@@ -1199,6 +1223,11 @@ export const translations = {
       fechaRegistro: "Registration date",
       perfilVoluntario: "Volunteer Profile",
       comentarios: "Additional comments",
+      asistio: "Attended",
+      marcar: "Mark",
+      marcarAsistencia: "Mark attendance",
+      quitarAsistencia: "Remove attendance",
+      remover: "Remove volunteer",
     },
     
     // Footer

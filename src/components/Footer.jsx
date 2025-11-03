@@ -2,10 +2,34 @@
 
 import { TreePine, Mail, Phone, MapPin, Heart } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useState, useEffect } from 'react';
 
 export default function Footer() {
   const { t } = useLanguage();
   const currentYear = new Date().getFullYear();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("authUser");
+      if (raw) setUser(JSON.parse(raw));
+      else setUser(null);
+    } catch (e) {
+      setUser(null);
+    }
+    
+    const onAuthChange = () => {
+      try {
+        const raw = localStorage.getItem("authUser");
+        if (raw) setUser(JSON.parse(raw));
+        else setUser(null);
+      } catch (e) {
+        setUser(null);
+      }
+    };
+    window.addEventListener("authChange", onAuthChange);
+    return () => window.removeEventListener("authChange", onAuthChange);
+  }, []);
 
   return (
     <footer className="bg-green-900 dark:bg-gray-950 text-white mt-auto">
@@ -26,6 +50,7 @@ export default function Footer() {
           <div>
             <h3 className="text-lg font-bold mb-4">{t('footer.enlacesRapidos')}</h3>
             <ul className="space-y-2">
+              {/* Enlaces base (siempre visibles) */}
               <li>
                 <a href="/" className="text-green-100 hover:text-green-400 transition-colors text-sm">
                   {t('sidebar.inicio')}
@@ -36,16 +61,77 @@ export default function Footer() {
                   {t('sidebar.proyectos')}
                 </a>
               </li>
-              <li>
-                <a href="/login" className="text-green-100 hover:text-green-400 transition-colors text-sm">
-                  {t('sidebar.acceso')}
-                </a>
-              </li>
-              <li>
-                <a href="/register" className="text-green-100 hover:text-green-400 transition-colors text-sm">
-                  {t('sidebar.registro')}
-                </a>
-              </li>
+
+              {/* Enlaces para usuarios autenticados (NO admin) */}
+              {user && user.role !== 'admin' && (
+                <li>
+                  <a href="/estadisticas" className="text-green-100 hover:text-green-400 transition-colors text-sm">
+                    {t('sidebar.estadisticas')}
+                  </a>
+                </li>
+              )}
+
+              {/* Enlaces para organizadores */}
+              {user && user.role === 'organizer' && (
+                <>
+                  <li>
+                    <a href="/control" className="text-green-100 hover:text-green-400 transition-colors text-sm">
+                      {t('common.control')}
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/proyectos/peticion" className="text-green-100 hover:text-green-400 transition-colors text-sm">
+                      {t('common.requestProject')}
+                    </a>
+                  </li>
+                </>
+              )}
+
+              {/* Enlaces para administradores */}
+              {user && user.role === 'admin' && (
+                <>
+                  <li>
+                    <a href="/admin" className="text-green-100 hover:text-green-400 transition-colors text-sm">
+                      {t('common.admin')}
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/admin/peticiones" className="text-green-100 hover:text-green-400 transition-colors text-sm">
+                      {t('common.requests')}
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/voluntarios" className="text-green-100 hover:text-green-400 transition-colors text-sm">
+                      {t('sidebar.voluntarios')}
+                    </a>
+                  </li>
+                </>
+              )}
+
+              {/* Enlaces de autenticación (solo si no hay usuario) */}
+              {!user && (
+                <>
+                  <li>
+                    <a href="/login" className="text-green-100 hover:text-green-400 transition-colors text-sm">
+                      {t('sidebar.acceso')}
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/register" className="text-green-100 hover:text-green-400 transition-colors text-sm">
+                      {t('sidebar.registro')}
+                    </a>
+                  </li>
+                </>
+              )}
+
+              {/* Perfil (si está autenticado) */}
+              {user && (
+                <li>
+                  <a href="/profile" className="text-green-100 hover:text-green-400 transition-colors text-sm">
+                    {t('perfil.titulo')}
+                  </a>
+                </li>
+              )}
             </ul>
           </div>
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Users, Calendar, CheckCircle, TreePine, Award, TrendingUp, MapPin, BarChart3 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { cargarProyectos } from '@/lib/proyectosUtils';
 
 export default function AdminDashboard() {
   const { t } = useLanguage();
@@ -41,8 +42,7 @@ export default function AdminDashboard() {
   const cargarEstadisticas = () => {
     try {
       // Proyectos
-      const proyectosData = localStorage.getItem('proyectos');
-      const proyectos = proyectosData ? JSON.parse(proyectosData) : [];
+      const proyectos = cargarProyectos();
       
       // Registros
       const registrosData = localStorage.getItem('eventRegistrations');

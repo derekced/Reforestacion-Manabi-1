@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Users, Search, Mail, Phone, Calendar, Award, X, FileText, MapPin, Trash, CheckCircle } from 'lucide-react';
 import ConfirmModal from './ui/ConfirmModal';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { cargarProyectos as cargarProyectosUtil } from '@/lib/proyectosUtils';
 
 export default function GestionVoluntarios() {
   const { t } = useLanguage();
@@ -36,8 +37,7 @@ export default function GestionVoluntarios() {
 
   const cargarProyectos = () => {
     try {
-      const data = localStorage.getItem('proyectos');
-      const proyectosData = data ? JSON.parse(data) : [];
+      const proyectosData = cargarProyectosUtil();
       setProyectos(proyectosData);
     } catch (error) {
       console.error('Error al cargar proyectos:', error);
@@ -391,12 +391,12 @@ export default function GestionVoluntarios() {
                   <p className="text-purple-100 text-sm">{t('gestionVoluntarios.detalleCompleto')}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                 {/* Toggle attendance in modal */}
                 {voluntarioDetalle.attended ? (
                   <button
                     onClick={() => toggleAttendance(voluntarioDetalle.id)}
-                    className="inline-flex items-center gap-2 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-3 py-1 rounded-lg text-sm"
+                    className="inline-flex items-center gap-1.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
                   >
                     <CheckCircle className="w-4 h-4" />
                     {t('gestionVoluntarios.quitarAsistencia') || 'Quitar asistencia'}
@@ -404,7 +404,7 @@ export default function GestionVoluntarios() {
                 ) : (
                   <button
                     onClick={() => toggleAttendance(voluntarioDetalle.id)}
-                    className="inline-flex items-center gap-2 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300 px-3 py-1 rounded-lg text-sm"
+                    className="inline-flex items-center gap-1.5 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-yellow-200 dark:hover:bg-yellow-900/30 transition-colors"
                   >
                     <CheckCircle className="w-4 h-4" />
                     {t('gestionVoluntarios.marcarAsistencia') || 'Marcar asistencia'}
@@ -413,7 +413,7 @@ export default function GestionVoluntarios() {
 
                 <button
                   onClick={() => removeVoluntario(voluntarioDetalle.id)}
-                  className="inline-flex items-center gap-2 bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300 px-3 py-1 rounded-lg text-sm"
+                  className="inline-flex items-center gap-1.5 bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-red-200 dark:hover:bg-red-900/30 transition-colors"
                 >
                   <Trash className="w-4 h-4" />
                   {t('gestionVoluntarios.remover')}

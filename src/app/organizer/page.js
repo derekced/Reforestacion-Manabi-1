@@ -5,6 +5,7 @@ import PageContainer from '@/components/PageContainer';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Edit, Trash2, X, Save } from 'lucide-react';
+import { cargarProyectos } from '@/lib/proyectosUtils';
 
 function OrganizerPage() {
   const { t } = useLanguage();
@@ -20,8 +21,7 @@ function OrganizerPage() {
       const u = JSON.parse(authRaw);
       setUser(u);
 
-      const proyectosRaw = localStorage.getItem('proyectos') || '[]';
-      const all = JSON.parse(proyectosRaw);
+      const all = cargarProyectos();
       // Si es admin, mostrar todos; si es organizer, sólo los asignados
       const visible = u.role === 'admin' ? all : all.filter(p => Array.isArray(p.organizers) && p.organizers.includes(u.email));
       setProjects(visible);
@@ -33,8 +33,7 @@ function OrganizerPage() {
   useEffect(() => {
     const handler = () => {
       try {
-        const proyectosRaw = localStorage.getItem('proyectos') || '[]';
-        const all = JSON.parse(proyectosRaw);
+        const all = cargarProyectos();
         const visible = user?.role === 'admin' ? all : all.filter(p => Array.isArray(p.organizers) && p.organizers.includes(user?.email));
         setProjects(visible);
       } catch (e) {}
@@ -58,10 +57,14 @@ function OrganizerPage() {
   const saveEdit = (e) => {
     e.preventDefault();
     try {
-      const proyectosRaw = localStorage.getItem('proyectos') || '[]';
-      const all = JSON.parse(proyectosRaw);
+      const all = cargarProyectos();
       const updated = all.map(p => p.id === editing.id ? { ...p, ...form } : p);
-      localStorage.setItem('proyectos', JSON.stringify(updated));
+      // Guardar con conversión de estado a inglés
+      const proyectosParaGuardar = updated.map(p => ({
+        ...p,
+        estado: p.estado === 'Próximo' ? 'upcoming' : p.estado === 'Activo' ? 'in_progress' : p.estado === 'Completado' ? 'completed' : p.estado
+      }));
+      localStorage.setItem('proyectos', JSON.stringify(proyectosParaGuardar));
       window.dispatchEvent(new Event('projectsChange'));
       setProjects(updated.filter(p => user.role === 'admin' ? true : (Array.isArray(p.organizers) && p.organizers.includes(user.email))));
       closeEdit();
@@ -73,10 +76,14 @@ function OrganizerPage() {
   const handleDelete = (id) => {
     if (!confirm(t('admin.confirmarEliminar'))) return;
     try {
-      const proyectosRaw = localStorage.getItem('proyectos') || '[]';
-      const all = JSON.parse(proyectosRaw);
+      const all = cargarProyectos();
       const updated = all.filter(p => p.id !== id);
-      localStorage.setItem('proyectos', JSON.stringify(updated));
+      // Guardar con conversión de estado a inglés
+      const proyectosParaGuardar = updated.map(p => ({
+        ...p,
+        estado: p.estado === 'Próximo' ? 'upcoming' : p.estado === 'Activo' ? 'in_progress' : p.estado === 'Completado' ? 'completed' : p.estado
+      }));
+      localStorage.setItem('proyectos', JSON.stringify(proyectosParaGuardar));
       window.dispatchEvent(new Event('projectsChange'));
       setProjects(updated.filter(p => user.role === 'admin' ? true : (Array.isArray(p.organizers) && p.organizers.includes(user.email))));
     } catch (e) {

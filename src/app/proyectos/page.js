@@ -6,6 +6,7 @@ import PageContainer from '@/components/PageContainer';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { BarChart3, Trees, Users, MapPin } from 'lucide-react';
+import { cargarProyectos } from '@/lib/proyectosUtils';
 
 // Importar el mapa de forma dinámica para evitar problemas de SSR
 const MapaProyectos = dynamic(
@@ -61,8 +62,7 @@ function ProyectosPage() {
   const cargarEstadisticas = () => {
     try {
       // 1. Total de proyectos
-      const proyectosData = localStorage.getItem('proyectos');
-      const proyectos = proyectosData ? JSON.parse(proyectosData) : [];
+      const proyectos = cargarProyectos();
       
       // 2. Árboles plantados REALES (de asistencias)
       const asistenciasData = localStorage.getItem('asistencias');

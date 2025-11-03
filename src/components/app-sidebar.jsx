@@ -86,6 +86,11 @@ export function AppSidebar({ ...props }) {
         url: "/admin/peticiones",
         icon: Trees,
       },
+      {
+        title: t('sidebar.voluntarios'),
+        url: "/voluntarios",
+        icon: UserCheck,
+      },
     ] : [];
 
     // Items de autenticación (solo si no hay usuario)

@@ -104,14 +104,25 @@ export default function FormularioUnirseEvento({ evento, isOpen, onClose }) {
     try {
       const registrosRaw = localStorage.getItem('eventRegistrations') || '[]';
       const registros = JSON.parse(registrosRaw);
+      
+      // Debug: mostrar registros del usuario para este evento
+      const registrosEvento = registros.filter(r => r.evento && r.evento.id === evento.id && r.userEmail === formData.email);
+      console.log('🔍 Registros encontrados para este evento:', registrosEvento);
+      
+      // Solo verificar registros confirmados (no cancelados)
+      // Si no tiene estado, se considera confirmado (registros antiguos)
       const yaRegistrado = registros.find(
-        r => r.evento && r.evento.id === evento.id && r.userEmail === formData.email
+        r => r.evento && r.evento.id === evento.id && r.userEmail === formData.email && (!r.estado || r.estado === 'confirmado')
       );
+      
       if (yaRegistrado) {
+        console.log('⚠️ Ya registrado:', yaRegistrado);
         setErrors({ general: 'Ya estás registrado en este evento' });
         setIsSubmitting(false);
         return;
       }
+      
+      console.log('✅ Permitiendo registro nuevo');
       const nuevoRegistro = {
         id: `${evento.id}-${formData.email}-${Date.now()}`,
         evento: {

@@ -611,6 +611,7 @@ export const translations = {
       marcarAsistencia: "Marcar asistencia",
       quitarAsistencia: "Quitar asistencia",
       remover: "Remover voluntario",
+      confirmRemove: "¿Estás seguro de que deseas eliminar este voluntario del proyecto?",
     },
     
     // Footer
@@ -1228,6 +1229,7 @@ export const translations = {
       marcarAsistencia: "Mark attendance",
       quitarAsistencia: "Remove attendance",
       remover: "Remove volunteer",
+      confirmRemove: "Are you sure you want to remove this volunteer from the project?",
     },
     
     // Footer

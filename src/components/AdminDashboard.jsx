@@ -44,15 +44,16 @@ export default function AdminDashboard() {
       // Proyectos
       const proyectos = cargarProyectos();
       
-      // Registros
+      // Registros - solo contar los confirmados (no cancelados)
       const registrosData = localStorage.getItem('eventRegistrations');
-      const registros = registrosData ? JSON.parse(registrosData) : [];
+      const todosRegistros = registrosData ? JSON.parse(registrosData) : [];
+      const registros = todosRegistros.filter(r => r.estado === 'confirmado');
       
       // Asistencias
       const asistenciasData = localStorage.getItem('asistencias');
       const asistencias = asistenciasData ? JSON.parse(asistenciasData) : [];
       
-      // Voluntarios únicos
+      // Voluntarios únicos (solo de registros confirmados)
       const voluntariosUnicos = new Set(registros.map(r => r.userEmail));
       
       // Árboles plantados reales

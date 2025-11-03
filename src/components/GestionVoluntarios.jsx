@@ -49,8 +49,9 @@ export default function GestionVoluntarios() {
       const registrosData = localStorage.getItem('eventRegistrations');
       const registros = registrosData ? JSON.parse(registrosData) : [];
       
+      // Solo mostrar voluntarios con registros confirmados (no cancelados)
       const voluntariosProyecto = registros.filter(
-        r => r.evento?.id === proyecto.id
+        r => r.evento?.id === proyecto.id && r.estado === 'confirmado'
       );
       
       setVoluntarios(voluntariosProyecto);

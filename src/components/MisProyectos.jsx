@@ -89,13 +89,34 @@ export default function MisProyectos() {
       const data = localStorage.getItem('eventRegistrations');
       if (data) {
         const registros = JSON.parse(data);
-        const updated = registros.map(r => 
-          r.id === selectedRegistro.id 
-            ? { ...r, estado: 'cancelado' }
-            : r
-        );
+        console.log('🗑️ Cancelando registro:', selectedRegistro.id);
+        console.log('📋 Total registros antes:', registros.length);
+        
+        // Eliminar completamente el registro en lugar de marcarlo como cancelado
+        const updated = registros.filter(r => r.id !== selectedRegistro.id);
+        console.log('📋 Total registros después:', updated.length);
+        
         localStorage.setItem('eventRegistrations', JSON.stringify(updated));
+        console.log('💾 Registro eliminado de localStorage');
+        
+        // También eliminar la asistencia si existe
+        const asistenciasData = localStorage.getItem('asistencias');
+        if (asistenciasData) {
+          const asistencias = JSON.parse(asistenciasData);
+          const authUser = localStorage.getItem('authUser') || sessionStorage.getItem('authUser');
+          if (authUser) {
+            const user = JSON.parse(authUser);
+            const asistenciasActualizadas = asistencias.filter(a => 
+              !(a.projectId === selectedRegistro.evento.id && a.userEmail === user.email)
+            );
+            localStorage.setItem('asistencias', JSON.stringify(asistenciasActualizadas));
+            console.log('🗑️ Asistencias eliminadas');
+            window.dispatchEvent(new Event('asistenciaChange'));
+          }
+        }
+        
         window.dispatchEvent(new Event('registrationChange'));
+        console.log('📢 Eventos disparados: registrationChange y asistenciaChange');
         setShowCancelModal(false);
         setSelectedRegistro(null);
       }

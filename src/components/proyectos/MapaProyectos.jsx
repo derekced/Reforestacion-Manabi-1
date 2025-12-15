@@ -90,7 +90,7 @@ const createCustomIcon = (estado) => {
   });
 };
 
-function MapaProyectos() {
+function MapaProyectos({ searchQuery = '' }) {
   const { t } = useLanguage();
   const [filtroEstado, setFiltroEstado] = useState('Todos');
   const [eventosReforestacion, setEventosReforestacion] = useState([]);
@@ -125,9 +125,21 @@ function MapaProyectos() {
   // Centro de Manabí
   const centroManabi = [-0.9, -80.0];
   
-  const eventosFiltrados = filtroEstado === 'Todos' 
+  // Filtrar por estado
+  let eventosFiltrados = filtroEstado === 'Todos' 
     ? eventosReforestacion 
     : eventosReforestacion.filter(e => e.estado === filtroEstado);
+  
+  // Filtrar por búsqueda
+  if (searchQuery.trim()) {
+    const queryLower = searchQuery.toLowerCase();
+    eventosFiltrados = eventosFiltrados.filter(evento => 
+      evento.nombre?.toLowerCase().includes(queryLower) ||
+      evento.ubicacion?.toLowerCase().includes(queryLower) ||
+      evento.descripcion?.toLowerCase().includes(queryLower) ||
+      evento.especies?.some(especie => especie.toLowerCase().includes(queryLower))
+    );
+  }
 
   return (
     <div className="space-y-4">

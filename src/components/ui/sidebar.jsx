@@ -236,6 +236,7 @@ function SidebarTrigger({ className, onClick, ...props }) {
   return (
     <Button
       data-sidebar="trigger"
+      data-sidebar-trigger
       data-slot="sidebar-trigger"
       variant="ghost"
       size="icon"

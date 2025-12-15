@@ -27,6 +27,7 @@ export const translations = {
       projectRequests: "Peticiones de Proyectos",
       noPendingRequests: "No hay peticiones pendientes",
       requestProject: "Solicitar Proyecto",
+      search: "Buscar proyectos, ubicaciones...",
     },
 
     // Profile section
@@ -164,6 +165,16 @@ export const translations = {
       control: "Control",
       voluntarios: "Voluntarios",
     },
+
+    // Accessibility menu
+    accessibility: {
+      menu: "Accesibilidad",
+      settings: "Configuración de Accesibilidad",
+      visualAlerts: "Alertas visuales",
+      voiceReading: "Lectura por voz",
+      highContrast: "Modo alto contraste",
+      largeText: "Texto ampliado",
+    },
     
     // Menú de usuario
     userMenu: {
@@ -218,6 +229,7 @@ export const translations = {
       cargandoMapa: "Cargando mapa...",
       cargando: "Cargando...",
       nuevaPeticion: "Nueva Petición de Proyecto",
+      buscando: "Buscando",
     },
     
     // Estadísticas
@@ -626,6 +638,9 @@ export const translations = {
       derechosReservados: "Reforestación Manabí. Todos los derechos reservados.",
       hechoConAmor: "Hecho con",
       porVoluntarios: "por voluntarios",
+      soporte: "Soporte",
+      politica: "Política de Privacidad",
+      terminos: "Términos de Uso",
     },
   },
   
@@ -651,6 +666,7 @@ export const translations = {
       projectRequests: "Project Requests",
       noPendingRequests: "No pending requests",
       requestProject: "Request Project",
+      search: "Search projects, locations...",
     },
 
     // Admin section translations
@@ -794,6 +810,16 @@ export const translations = {
       control: "Control",
       voluntarios: "Volunteers",
     },
+
+    // Accessibility menu
+    accessibility: {
+      menu: "Accessibility",
+      settings: "Accessibility Settings",
+      visualAlerts: "Visual alerts",
+      voiceReading: "Voice reading",
+      highContrast: "High contrast mode",
+      largeText: "Large text",
+    },
     
     // User menu
     userMenu: {
@@ -838,6 +864,7 @@ export const translations = {
       cargandoMapa: "Loading map...",
       cargando: "Loading...",
       nuevaPeticion: "New Project Request",
+      buscando: "Searching",
     },
     
     // Statistics
@@ -1244,6 +1271,9 @@ export const translations = {
       derechosReservados: "Reforestation Manabí. All rights reserved.",
       hechoConAmor: "Made with",
       porVoluntarios: "by volunteers",
+      soporte: "Support",
+      politica: "Privacy Policy",
+      terminos: "Terms of Use",
     },
   },
 };

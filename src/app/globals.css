@@ -94,6 +94,7 @@
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
       Roboto, sans-serif;
     overflow-x: hidden;
+    transition: font-size 0.3s ease-out;
   }
 
   html {
@@ -206,4 +207,66 @@
 
 .custom-popup .leaflet-popup-close-button:hover {
   color: #10b981;
+}
+
+/* Modo Alto Contraste */
+.high-contrast {
+  --forest-darkest: 0 0 0;
+  --forest-dark: 0 0 0;
+  --forest-primary: 0 0 0;
+  --background: 0 0% 100%;
+  --foreground: 0 0% 0%;
+  --border: 0 0% 0%;
+}
+
+.high-contrast.dark {
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  --forest-lightest: 255 255 255;
+  --forest-lighter: 255 255 255;
+  --forest-light: 255 255 255;
+}
+
+.high-contrast * {
+  border-color: currentColor !important;
+}
+
+.high-contrast button,
+.high-contrast a {
+  text-decoration: underline;
+  font-weight: 700 !important;
+}
+
+/* Texto Ampliado */
+.large-text {
+  font-size: 125%;
+}
+
+.large-text * {
+  line-height: 1.6;
+}
+
+.large-text h1 {
+  font-size: 2.5rem;
+}
+
+.large-text h2 {
+  font-size: 2rem;
+}
+
+.large-text h3 {
+  font-size: 1.75rem;
+}
+
+.large-text button,
+.large-text input {
+  padding: 0.75rem 1.5rem;
+}
+
+/* Excepciones: elementos que no deben aumentar de tamaño */
+.large-text .text-xs,
+.large-text [class*="text-[10px]"],
+.large-text .badge,
+.large-text header p {
+  font-size: 0.7rem !important;
 }

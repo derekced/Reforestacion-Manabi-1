@@ -4,6 +4,9 @@ import { AppSidebar } from "@/components/app-sidebar";
 import SeedUsers from "@/components/SeedUsers";
 import ToastContainer from "@/components/ui/Toast";
 import Footer from "@/components/Footer";
+import Header from "@/components/Header";
+import ContextualHelp from "@/components/ContextualHelp";
+import KeyboardShortcuts from "@/components/KeyboardShortcuts";
 import { ThemeProvider } from "@/components/theme-provider";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import DynamicBreadcrumb from "@/components/DynamicBreadcrumb";
@@ -45,18 +48,11 @@ export default function RootLayout({ children }) {
             <SidebarProvider>
               <SeedUsers />
               <ToastContainer />
+              <ContextualHelp />
+              <KeyboardShortcuts />
               <AppSidebar />
               <SidebarInset>
-                <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-2 border-b bg-white/95 backdrop-blur-sm transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 dark:bg-gray-950/95 dark:border-gray-800">
-                  <div className="flex items-center gap-2 px-4 w-full">
-                    <SidebarTrigger className="-ml-1 shrink-0" />
-                    <Separator
-                      orientation="vertical"
-                      className="mr-2 shrink-0 data-[orientation=vertical]:h-4"
-                    />
-                    <DynamicBreadcrumb />
-                  </div>
-                </header>
+                <Header />
                 <div className="flex flex-col min-h-[calc(100vh-4rem)]">
                   <main className="flex-1">
                     {children}

@@ -210,6 +210,26 @@ export default function Footer() {
           <p className="text-green-100 text-sm text-center md:text-left">
             © {currentYear} {t('footer.derechosReservados')}
           </p>
+          
+          {/* Enlaces institucionales */}
+          <div className="flex items-center gap-4 text-sm">
+            <a href="/soporte" className="text-green-100 hover:text-green-400 transition-colors">
+              {t('footer.soporte') || 'Soporte'}
+            </a>
+            <span className="text-green-700">•</span>
+            <a href="/contacto" className="text-green-100 hover:text-green-400 transition-colors">
+              {t('footer.contacto')}
+            </a>
+            <span className="text-green-700">•</span>
+            <a href="/politica" className="text-green-100 hover:text-green-400 transition-colors">
+              {t('footer.politica') || 'Política de Privacidad'}
+            </a>
+            <span className="text-green-700">•</span>
+            <a href="/terminos" className="text-green-100 hover:text-green-400 transition-colors">
+              {t('footer.terminos') || 'Términos de Uso'}
+            </a>
+          </div>
+          
           <p className="text-green-100 text-sm flex items-center gap-1">
             {t('footer.hechoConAmor')} <Heart className="w-4 h-4 text-red-400 fill-red-400" /> {t('footer.porVoluntarios')}
           </p>

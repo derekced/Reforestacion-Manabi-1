@@ -5,7 +5,7 @@ import { Suspense, useState, useEffect } from 'react';
 import PageContainer from '@/components/PageContainer';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { BarChart3, Trees, Users, MapPin } from 'lucide-react';
+import { BarChart3, Trees, Users, MapPin, Search } from 'lucide-react';
 import { cargarProyectos } from '@/lib/proyectosUtils';
 
 // Importar el mapa de forma dinámica para evitar problemas de SSR
@@ -33,6 +33,7 @@ const MapaProyectos = dynamic(
 
 function ProyectosPage() {
   const { t } = useLanguage();
+  const [searchQuery, setSearchQuery] = useState('');
   const [stats, setStats] = useState({
     totalProyectos: 0,
     arbolesPlantados: 0,
@@ -172,6 +173,31 @@ function ProyectosPage() {
           </div>
         </div>
 
+        {/* Barra de búsqueda de proyectos */}
+        <div className="mb-8">
+          <div className="max-w-3xl mx-auto">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t('common.search') || "Buscar proyectos por nombre, ubicación, descripción..."}
+                className="w-full pl-12 pr-4 py-4 border-2 border-gray-300 dark:border-gray-600 rounded-2xl 
+                         bg-white dark:bg-gray-800 text-base shadow-lg
+                         focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent
+                         text-gray-900 dark:text-white placeholder-gray-500
+                         transition-all duration-300"
+              />
+            </div>
+            {searchQuery && (
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 text-center">
+                {t('proyectos.buscando') || 'Buscando'}: <span className="font-semibold">{searchQuery}</span>
+              </p>
+            )}
+          </div>
+        </div>
+
         {/* Mapa con diseño mejorado */}
         <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
           <div className="bg-linear-to-r from-green-600 to-emerald-600 dark:from-green-700 dark:to-emerald-700 px-6 py-4">
@@ -185,7 +211,7 @@ function ProyectosPage() {
           </div>
           <div className="p-6">
             <Suspense fallback={<div>{t('proyectos.cargando')}</div>}>
-              <MapaProyectos />
+              <MapaProyectos searchQuery={searchQuery} />
             </Suspense>
           </div>
         </div>

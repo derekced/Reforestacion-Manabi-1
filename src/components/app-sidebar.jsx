@@ -43,11 +43,13 @@ export function AppSidebar({ ...props }) {
         title: t('sidebar.inicio'),
         url: "/",
         icon: Home,
+        shortcut: "⌃H",
       },
       {
         title: t('sidebar.proyectos'),
         url: "/proyectos",
         icon: Leaf,
+        shortcut: "⌃P",
       },
     ];
 
@@ -57,6 +59,7 @@ export function AppSidebar({ ...props }) {
         title: t('sidebar.estadisticas'),
         url: "/estadisticas",
         icon: BarChart3,
+        shortcut: "⌃E",
       },
     ] : [];
 
@@ -80,6 +83,7 @@ export function AppSidebar({ ...props }) {
         title: t('common.admin'),
         url: "/admin",
         icon: Settings,
+        shortcut: "⌃⇧A",
       },
       {
         title: t('common.requests'),
@@ -90,6 +94,7 @@ export function AppSidebar({ ...props }) {
         title: t('sidebar.voluntarios'),
         url: "/voluntarios",
         icon: UserCheck,
+        shortcut: "⌃⇧V",
       },
     ] : [];
 
@@ -99,11 +104,13 @@ export function AppSidebar({ ...props }) {
         title: t('sidebar.acceso'),
         url: "/login",
         icon: LogOut,
+        shortcut: "⌃L",
       },
       {
         title: t('sidebar.registro'),
         url: "/register",
         icon: Users,
+        shortcut: "⌃⇧R",
       },
     ];
 
@@ -176,9 +183,16 @@ export function AppSidebar({ ...props }) {
                     className="text-forest-lightest/85 hover:bg-white/10 hover:text-white data-[active=true]:bg-white/15 data-[active=true]:text-white dark:text-gray-300 dark:hover:bg-white/5 dark:data-[active=true]:bg-white/10 transition-all"
                     tooltip={item.title}
                   >
-                    <a href={item.url} className="flex items-center gap-3">
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
+                    <a href={item.url} className="flex items-center gap-3 justify-between w-full">
+                      <div className="flex items-center gap-3">
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </div>
+                      {item.shortcut && (
+                        <span className="text-xs opacity-50 group-data-[collapsible=icon]:hidden">
+                          {item.shortcut}
+                        </span>
+                      )}
                     </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

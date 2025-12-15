@@ -5,30 +5,38 @@ import GestionVoluntarios from '@/components/GestionVoluntarios';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthRequired from '@/components/AuthRequired';
+import { getCurrentUser } from '@/lib/supabase-v2';
 
 export default function VoluntariosPage() {
   const [allowed, setAllowed] = useState(null); // null = loading, true = allowed, false = not allowed
   const router = useRouter();
 
   useEffect(() => {
-    try {
-      const u = localStorage.getItem('authUser') || sessionStorage.getItem('authUser');
-      if (!u) {
-        setAllowed(false);
-        return;
-      }
-      const user = JSON.parse(u);
-      if (user.role === 'organizer' || user.role === 'admin') {
-        setAllowed(true);
-      } else {
-        // not allowed for other roles
+    const checkAuth = async () => {
+      try {
+        const user = await getCurrentUser();
+        
+        if (!user) {
+          setAllowed(false);
+          return;
+        }
+
+        const userRole = user.profile?.role || user.user_metadata?.role || 'volunteer';
+        
+        if (userRole === 'organizer' || userRole === 'admin') {
+          setAllowed(true);
+        } else {
+          setAllowed(false);
+          router.push('/');
+        }
+      } catch (e) {
+        console.error('Error checking auth:', e);
         setAllowed(false);
         router.push('/');
       }
-    } catch (e) {
-      setAllowed(false);
-      router.push('/');
-    }
+    };
+
+    checkAuth();
   }, [router]);
 
   if (allowed === null) {
@@ -40,10 +48,7 @@ export default function VoluntariosPage() {
   }
 
   if (allowed === false) {
-    // If not logged in, show auth required; otherwise we've already redirected
-    const u = localStorage.getItem('authUser') || sessionStorage.getItem('authUser');
-    if (!u) return <AuthRequired />;
-    return null;
+    return <AuthRequired />;
   }
 
   return (

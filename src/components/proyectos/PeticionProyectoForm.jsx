@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Trees, MapPin, Calendar, Users, FileText } from "lucide-react";
 import { useLanguage } from '@/contexts/LanguageContext';
+import { crearPeticionProyecto, getCurrentUser } from '@/lib/supabase-v2';
 
 export default function PeticionProyectoForm({ onSubmit }) {
   const { t } = useLanguage();
@@ -17,6 +18,15 @@ export default function PeticionProyectoForm({ onSubmit }) {
   });
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const user = await getCurrentUser();
+      setCurrentUser(user);
+    };
+    loadUser();
+  }, []);
 
   const validate = () => {
     const e = {};
@@ -38,16 +48,58 @@ export default function PeticionProyectoForm({ onSubmit }) {
     if (errors[e.target.name]) setErrors(er => ({ ...er, [e.target.name]: "" }));
   };
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
     if (!validate()) return;
-    // Guardar petición en localStorage
-    const raw = localStorage.getItem("peticionesProyectos") || "[]";
-    const arr = JSON.parse(raw);
-    arr.push({ ...form, id: Date.now() });
-    localStorage.setItem("peticionesProyectos", JSON.stringify(arr));
-    setSuccess(true);
-    if (onSubmit) onSubmit();
+    
+    if (!currentUser) {
+      alert('Debes iniciar sesión para enviar una petición.');
+      return;
+    }
+    
+    try {
+      // Obtener el usuario_id (debe ser UUID, no email)
+      const userId = currentUser.id || currentUser.profile?.id;
+      
+      if (!userId) {
+        alert('No se pudo obtener tu identificación de usuario. Intenta cerrar sesión y volver a iniciar.');
+        return;
+      }
+      
+      // Preparar datos de la petición (usar nombres de columnas correctos)
+      const peticionData = {
+        usuario_id: userId,
+        nombre: form.nombre,
+        ubicacion: form.ubicacion,
+        lat: parseFloat(form.lat),
+        lng: parseFloat(form.lng),
+        fecha: form.fecha,
+        arboles: parseInt(form.arboles, 10),
+        voluntarios: parseInt(form.voluntarios, 10),
+        especies: form.especies, // Se guarda como string (separado por comas)
+        descripcion: form.descripcion,
+        estado: 'pendiente'
+      };
+      
+      console.log('📝 Enviando petición:', peticionData);
+      
+      // Guardar petición en Supabase
+      const { error } = await crearPeticionProyecto(peticionData);
+      
+      if (error) {
+        console.error('❌ Error al crear petición:', error);
+        alert('Error al enviar la petición: ' + (error.message || 'Inténtalo de nuevo.'));
+        return;
+      }
+      
+      console.log('✅ Petición creada exitosamente');
+      
+      setSuccess(true);
+      if (onSubmit) onSubmit();
+    } catch (error) {
+      console.error('Error al crear petición:', error);
+      alert('Error al enviar la petición: ' + (error.message || 'Inténtalo de nuevo.'));
+    }
   };
 
   if (success) return (

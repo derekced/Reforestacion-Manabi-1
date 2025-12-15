@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { UserPlus, Mail, Lock, User, Phone, MapPin } from "lucide-react";
+import { signUp, getCurrentUser } from "@/lib/supabase-v2";
 
 export default function RegisterForm({ onBack }) {
   const router = useRouter();
@@ -25,14 +26,13 @@ export default function RegisterForm({ onBack }) {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // si ya hay usuario autenticado, redirigir fuera de registro
+  // si ya hay usuario autenticado con Supabase, redirigir fuera de registro
   useEffect(() => {
-    try {
-      const u = localStorage.getItem("authUser") || sessionStorage.getItem("authUser");
-      if (u) router.push('/');
-    } catch (e) {
-      // ignore
-    }
+    const checkUser = async () => {
+      const user = await getCurrentUser();
+      if (user) router.push('/');
+    };
+    checkUser();
   }, [router]);
 
   const handleChange = e => {
@@ -97,34 +97,48 @@ export default function RegisterForm({ onBack }) {
     setLoading(true);
     
     try {
-      // Simular registro (aquí iría tu API)
-      await new Promise((r) => setTimeout(r, 1000));
+      // Registrar usuario con Supabase Auth
+      // Esto creará entrada en auth.users y trigger automático creará perfil
+      const { data, error: signUpError } = await signUp({
+        email: form.email,
+        password: form.password,
+        options: {
+          data: {
+            nombre: form.nombre,
+            telefono: form.telefono || null,
+            ciudad: form.ciudad,
+            role: form.role,
+            organizationName: form.organizationName || null,
+            organizationWebsite: form.organizationWebsite || null,
+          }
+        }
+      });
       
-      // Verificar si el email ya existe
-      const usuarios = JSON.parse(localStorage.getItem('usuarios') || '[]');
-      if (usuarios.some(u => u.email === form.email)) {
-        setError(t('register.emailYaRegistrado'));
+      if (signUpError) {
+        // Manejar errores específicos de Supabase
+        if (signUpError.message.includes('already registered')) {
+          setError(t('register.emailYaRegistrado'));
+        } else if (signUpError.message.includes('Password should be')) {
+          setError('La contraseña debe tener al menos 6 caracteres');
+        } else {
+          setError(signUpError.message || 'Error al crear la cuenta');
+        }
         setLoading(false);
         return;
       }
       
-      // Guardar usuario
-      const nuevoUsuario = {
-        nombre: form.nombre,
-        email: form.email,
-        telefono: form.telefono,
-        ciudad: form.ciudad,
-        role: form.role,
-        organizationName: form.organizationName || undefined,
-        organizationWebsite: form.organizationWebsite || undefined,
-        password: form.password, // En producción, esto debe estar hasheado
-        fechaRegistro: new Date().toISOString(),
-      };
-      
-      usuarios.push(nuevoUsuario);
-      localStorage.setItem('usuarios', JSON.stringify(usuarios));
-      
+      // Registro exitoso
       setSuccess(true);
+      
+      // Mostrar mensaje sobre confirmación de email
+      try {
+        window.dispatchEvent(new CustomEvent('app:toast', {
+          detail: {
+            title: 'Registro exitoso',
+            message: 'Revisa tu email para confirmar tu cuenta'
+          }
+        }));
+      } catch(e) {}
       
       // Redirigir al login después de 2 segundos
       setTimeout(() => {
@@ -132,6 +146,7 @@ export default function RegisterForm({ onBack }) {
       }, 2000);
       
     } catch (err) {
+      console.error('Error en registro:', err);
       setError('Error al crear la cuenta');
     } finally {
       setLoading(false);
@@ -148,8 +163,11 @@ export default function RegisterForm({ onBack }) {
           <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
             {t('register.registroExitoso')}
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Redirigiendo al inicio de sesión...
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            ¡Tu cuenta ha sido creada exitosamente!
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-500 mb-6">
+            Revisa tu email para confirmar tu cuenta. Redirigiendo al inicio de sesión...
           </p>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
         </div>
@@ -312,8 +330,8 @@ export default function RegisterForm({ onBack }) {
         </>
       )}
 
-      {/* Términos */}
-      <label className="flex items-start gap-3 mb-6 cursor-pointer">
+      {/* Términos y condiciones */}
+      <label className="flex items-start mb-6 gap-2">
         <input 
           name="terminos"
           type="checkbox" 

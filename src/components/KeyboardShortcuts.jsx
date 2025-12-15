@@ -38,7 +38,7 @@ export default function KeyboardShortcuts() {
       if (e.ctrlKey) key.push("ctrl");
       if (e.shiftKey) key.push("shift");
       if (e.altKey) key.push("alt");
-      key.push(e.key.toLowerCase());
+      if (e.key) key.push(e.key.toLowerCase());
       
       const combo = key.join("+");
       const action = shortcuts[combo];

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Users, Calendar, CheckCircle, TreePine, Award, TrendingUp, MapPin, BarChart3 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { cargarProyectos } from '@/lib/proyectosUtils';
+import { getProyectos, getEstadisticasGlobales } from '@/lib/supabase-v2';
 
 export default function AdminDashboard() {
   const { t } = useLanguage();
@@ -39,57 +39,51 @@ export default function AdminDashboard() {
     };
   }, []);
 
-  const cargarEstadisticas = () => {
+  const cargarEstadisticas = async () => {
     try {
-      // Proyectos
-      const proyectos = cargarProyectos();
+      // Cargar estadísticas desde Supabase
+      const { data: estadisticas, error: statsError } = await getEstadisticasGlobales();
       
-      // Registros - solo contar los confirmados (no cancelados)
-      const registrosData = localStorage.getItem('eventRegistrations');
-      const todosRegistros = registrosData ? JSON.parse(registrosData) : [];
-      const registros = todosRegistros.filter(r => r.estado === 'confirmado');
+      if (statsError) {
+        console.error('Error al cargar estadísticas:', statsError);
+        return;
+      }
       
-      // Asistencias
-      const asistenciasData = localStorage.getItem('asistencias');
-      const asistencias = asistenciasData ? JSON.parse(asistenciasData) : [];
+      // Cargar proyectos para contar por estado
+      const { data: proyectos, error: proyectosError } = await getProyectos();
       
-      // Voluntarios únicos (solo de registros confirmados)
-      const voluntariosUnicos = new Set(registros.map(r => r.userEmail));
-      
-      // Árboles plantados reales
-      const totalArboles = asistencias.reduce((sum, a) => {
-        return sum + (Number.parseInt(a.arbolesPlantados, 10) || 0);
-      }, 0);
+      if (proyectosError) {
+        console.error('Error al cargar proyectos:', proyectosError);
+        return;
+      }
       
       // Contar proyectos por estado
-      const activos = proyectos.filter(p => p.estado === 'Activo').length;
-      const proximos = proyectos.filter(p => p.estado === 'Próximo').length;
-      const completados = proyectos.filter(p => p.estado === 'Completado').length;
+      const activos = (proyectos || []).filter(p => p.estado === 'Activo').length;
+      const proximos = (proyectos || []).filter(p => p.estado === 'Próximo').length;
+      const completados = (proyectos || []).filter(p => p.estado === 'Completado').length;
       
       setStats({
-        totalProyectos: proyectos.length,
-        totalRegistros: registros.length,
-        totalVoluntariosUnicos: voluntariosUnicos.size,
-        totalAsistencias: asistencias.length,
-        arbolesPlantadosReales: totalArboles,
+        totalProyectos: estadisticas?.total_proyectos || 0,
+        totalRegistros: estadisticas?.total_registros || 0,
+        totalVoluntariosUnicos: estadisticas?.voluntarios_unicos || 0,
+        totalAsistencias: estadisticas?.total_asistencias || 0,
+        arbolesPlantadosReales: estadisticas?.arboles_plantados || 0,
         proyectosActivos: activos,
         proyectosProximos: proximos,
         proyectosCompletados: completados,
       });
       
-      // Actividad reciente (últimos 10 registros)
-      const actividadReciente = registros
-        .sort((a, b) => new Date(b.fechaRegistro) - new Date(a.fechaRegistro))
-        .slice(0, 10)
-        .map(r => ({
+      // Actividad reciente desde Supabase (ya viene ordenada)
+      if (estadisticas?.registros_recientes) {
+        const actividadReciente = estadisticas.registros_recientes.map(r => ({
           id: r.id,
           tipo: 'registro',
-          usuario: r.userName || r.userEmail,
-          proyecto: r.evento?.nombre || 'Proyecto',
-          fecha: r.fechaRegistro,
+          usuario: r.nombre_completo || 'Usuario',
+          proyecto: r.proyecto_nombre || 'Proyecto',
+          fecha: r.fecha_registro,
         }));
-      
-      setRecentActivity(actividadReciente);
+        setRecentActivity(actividadReciente);
+      }
       
     } catch (error) {
       console.error('Error al cargar estadísticas:', error);

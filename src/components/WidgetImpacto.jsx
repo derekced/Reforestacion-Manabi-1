@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { getAsistenciasUsuario, getCurrentUser } from '@/lib/supabase-v2';
 
 export default function WidgetImpacto() {
   const { t } = useLanguage();
@@ -31,37 +32,60 @@ export default function WidgetImpacto() {
     };
   }, []);
 
-  const cargarDatos = () => {
+  const cargarDatos = async () => {
     try {
-      // Cargar meta semanal
+      console.log('🔄 [WidgetImpacto] Cargando datos...');
+      
+      // Cargar meta semanal (mantener en localStorage - es preferencia de usuario)
       const savedMeta = localStorage.getItem('metaSemanal');
       if (savedMeta) {
         setMetaSemanal(parseInt(savedMeta));
       }
 
       // Obtener usuario actual
-      const authUser = localStorage.getItem('authUser') || sessionStorage.getItem('authUser');
-      if (!authUser) return;
-
-      const user = JSON.parse(authUser);
-
-      // Cargar asistencias registradas del usuario
-      const asistenciasData = localStorage.getItem('asistencias');
-      if (asistenciasData) {
-        const asistencias = JSON.parse(asistenciasData);
-        const userAsistencias = asistencias.filter(a => a.userEmail === user.email);
-        
-        // Calcular total de árboles plantados
-        const totalPlantados = userAsistencias.reduce((sum, asistencia) => {
-          return sum + (Number.parseInt(asistencia.arbolesPlantados, 10) || 0);
-        }, 0);
-        
-        setArbolesPlantados(totalPlantados);
-      } else {
+      const user = await getCurrentUser();
+      console.log('👤 [WidgetImpacto] Usuario:', user ? 'Autenticado' : 'No autenticado');
+      
+      if (!user) {
+        console.log('⚠️ [WidgetImpacto] No hay usuario autenticado');
         setArbolesPlantados(0);
+        return;
       }
+
+      // Determinar el userId (puede venir de diferentes fuentes)
+      const userId = user.id || user.profile?.id || user.email;
+      console.log('🆔 [WidgetImpacto] userId:', userId);
+      
+      if (!userId) {
+        console.log('⚠️ [WidgetImpacto] No se pudo determinar userId');
+        setArbolesPlantados(0);
+        return;
+      }
+
+      // Cargar asistencias con el userId
+      const { data, error } = await getAsistenciasUsuario(userId);
+      
+      if (error) {
+        console.error('❌ [WidgetImpacto] Error al cargar asistencias:', error);
+        setArbolesPlantados(0);
+        return;
+      }
+
+      console.log('✅ [WidgetImpacto] Asistencias cargadas:', data?.length || 0);
+      console.log('📊 [WidgetImpacto] Detalle asistencias:', data);
+
+      // Calcular total de árboles plantados
+      const totalPlantados = (data || []).reduce((sum, asistencia) => {
+        const arboles = asistencia.arboles_plantados || 0;
+        console.log(`  - Asistencia: ${arboles} árboles`);
+        return sum + arboles;
+      }, 0);
+      
+      console.log('🌳 [WidgetImpacto] Total árboles plantados:', totalPlantados);
+      setArbolesPlantados(totalPlantados);
     } catch (error) {
-      console.error('Error al cargar datos:', error);
+      console.error('❌ [WidgetImpacto] Error al cargar datos:', error);
+      setArbolesPlantados(0);
     }
   };
 

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Mail, ArrowLeft, CheckCircle } from "lucide-react";
+import { resetPassword } from "@/lib/supabase-v2";
 
 export default function RecuperarForm() {
   const router = useRouter();
@@ -34,13 +35,19 @@ export default function RecuperarForm() {
     }
 
     try {
-      // Aquí llamarías a tu API de recuperación de contraseña
-      // Simulación de espera
-      await new Promise((r) => setTimeout(r, 1500));
+      // Enviar email de recuperación con Supabase
+      const { error: resetError } = await resetPassword(email);
       
-      // Simular envío exitoso
+      if (resetError) {
+        setError(resetError.message || 'Error al enviar el email de recuperación');
+        setLoading(false);
+        return;
+      }
+      
+      // Email enviado exitosamente
       setSuccess(true);
     } catch (err) {
+      console.error('Error en recuperación:', err);
       setError(t('recuperar.emailRequerido'));
     }
     setLoading(false);

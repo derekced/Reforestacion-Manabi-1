@@ -4,78 +4,32 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LogIn, Mail, Lock } from "lucide-react";
+import { signIn, getCurrentUser } from "@/lib/supabase-v2";
 
 export default function LoginForm() {
   const router = useRouter();
   const { t } = useLanguage();
 
-  // si ya hay usuario autenticado en localStorage/sessionStorage, redirigir
+  // Verificar si ya hay usuario autenticado con Supabase
   React.useEffect(() => {
-    try {
-      const u = localStorage.getItem("authUser") || sessionStorage.getItem("authUser");
-      if (u) router.push("/");
-    } catch (e) {
-      // ignore
-    }
+    const checkUser = async () => {
+      const user = await getCurrentUser();
+      if (user) router.push("/");
+    };
+    checkUser();
   }, [router]);
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [remember, setRemember] = useState(true);
-  const [attempts, setAttempts] = useState(0);
-  const [lockUntil, setLockUntil] = useState(null);
-
-  // Helpers for per-email attempts stored in localStorage under key 'loginAttempts'
-  const readAttemptsMap = () => {
-    try {
-      return JSON.parse(localStorage.getItem("loginAttempts") || "{}");
-    } catch (e) {
-      return {};
-    }
-  };
-  const writeAttemptsMap = (m) => {
-    try {
-      localStorage.setItem("loginAttempts", JSON.stringify(m));
-    } catch (e) {}
-  };
-  const getAttemptsFor = (email) => {
-    if (!email) return { count: 0, until: null };
-    const m = readAttemptsMap();
-    return m[email] || { count: 0, until: null };
-  };
-  const setAttemptsFor = (email, count, until = null) => {
-    const m = readAttemptsMap();
-    m[email] = { count, until };
-    writeAttemptsMap(m);
-  };
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
 
-  // Update attempts/lock when email changes
-  React.useEffect(() => {
-    if (!form.email) {
-      setAttempts(0);
-      setLockUntil(null);
-      return;
-    }
-    const info = getAttemptsFor(form.email);
-    setAttempts(info.count || 0);
-    setLockUntil(info.until || null);
-  }, [form.email]);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // read per-email lock
-    const info = getAttemptsFor(form.email);
-    if (info && info.until && Date.now() < info.until) {
-      setLockUntil(info.until);
-      setAttempts(info.count || 0);
-      setError(`${t('login.credencialesInvalidas')} - ${Math.ceil((info.until - Date.now())/1000)}s`);
-      return;
-    }
     setLoading(true);
     setError("");
+
     // Validación básica
     if (!form.email) {
       setError(t('login.emailRequerido'));
@@ -87,69 +41,60 @@ export default function LoginForm() {
       setLoading(false);
       return;
     }
+
     try {
-      // Credenciales de administrador
-      const adminCredentials = {
-        email: "admin@reforestacion.com",
-        password: "admin123",
-      };
-
-      // Simulación de espera
-      await new Promise((r) => setTimeout(r, 600));
-
-      // Buscar en usuarios locales
-      const usuarios = JSON.parse(localStorage.getItem("usuarios") || "[]");
-      const matched = usuarios.find(u => u.email === form.email && u.password === form.password);
-
-      const isAdmin = form.email === adminCredentials.email && form.password === adminCredentials.password;
-
-      if (!matched && !isAdmin) {
-        // credenciales invalidas
-        throw new Error("Invalid credentials");
-      }
-
-      // Simular usuario autenticado: guarda en storage según "recordarme"
-      const authUser = {
-        name: isAdmin ? "Administrador" : (matched?.nombre || form.email.split("@")[0].replace(/\W/g, " ").trim() || "Usuario"),
+      // Intentar login con Supabase Auth
+      const { data, error: signInError } = await signIn({
         email: form.email,
-        avatar: (matched && matched.avatar) || "/avatars/user.jpg",
-        role: isAdmin ? "admin" : (matched?.role || "user"),
-      };
+        password: form.password
+      });
 
-      try {
-        if (remember) {
-          localStorage.setItem("authUser", JSON.stringify(authUser));
+      if (signInError) {
+        // Manejar errores específicos de Supabase
+        if (signInError.message.includes('Invalid login credentials')) {
+          setError(t('login.credencialesInvalidas'));
+        } else if (signInError.message.includes('Email not confirmed')) {
+          setError('Por favor confirma tu email antes de iniciar sesión');
         } else {
-          sessionStorage.setItem("authUser", JSON.stringify(authUser));
+          setError(signInError.message || t('login.credencialesInvalidas'));
         }
-      } catch (e) {
-        // si falla localStorage, ignorar
+        setLoading(false);
+        return;
       }
 
-  // resetear intentos en exito (por email)
-  setAttemptsFor(form.email, 0, null);
-  setAttempts(0);
-  setLockUntil(null);
-  // show toast
-  try { window.dispatchEvent(new CustomEvent('app:toast', { detail: { title: 'Bienvenido', message: 'Has iniciado sesión correctamente. ¡Gracias por ayudar al planeta!' } })); } catch(e) {}
-  router.push("/");
-    } catch (err) {
-      // manejar intento fallido por email
-      const current = getAttemptsFor(form.email);
-      const nextCount = (current.count || 0) + 1;
-      if (nextCount >= 3) {
-        const until = Date.now() + 30 * 1000; // 30s bloqueo
-        setAttemptsFor(form.email, nextCount, until);
-        setLockUntil(until);
-        setAttempts(nextCount);
-        setError(t("login.credencialesInvalidas"));
-      } else {
-        setAttemptsFor(form.email, nextCount, null);
-        setAttempts(nextCount);
-        setError(t("login.credencialesInvalidas"));
+      if (data && data.user) {
+        // Obtener perfil completo del usuario
+        const fullUser = await getCurrentUser();
+        const userRole = fullUser?.profile?.role || fullUser?.user_metadata?.role || 'volunteer';
+        
+        // Guardar en localStorage para compatibilidad con páginas antiguas
+        const userForStorage = {
+          id: data.user.id, // UUID del usuario
+          email: data.user.email,
+          nombre: fullUser?.profile?.nombre || fullUser?.user_metadata?.nombre || data.user.email,
+          role: userRole,
+          avatar: fullUser?.profile?.avatar || '/avatars/user.jpg'
+        };
+        localStorage.setItem('authUser', JSON.stringify(userForStorage));
+        
+        // Login exitoso, mostrar toast y redirigir
+        try { 
+          window.dispatchEvent(new CustomEvent('app:toast', { 
+            detail: { 
+              title: 'Bienvenido', 
+              message: 'Has iniciado sesión correctamente. ¡Gracias por ayudar al planeta!' 
+            } 
+          })); 
+        } catch(e) {}
+        
+        router.push("/");
       }
+    } catch (err) {
+      console.error('Error en login:', err);
+      setError(t('login.credencialesInvalidas'));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -201,23 +146,15 @@ export default function LoginForm() {
         />
       </label>
 
-      {/* Remember me & Forgot password */}
-      <div className="flex items-center justify-between mb-6">
-        <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
-          <input 
-            type="checkbox" 
-            checked={remember} 
-            onChange={e => setRemember(e.target.checked)} 
-            className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-          />
-          <span>{t('login.recordarme')}</span>
-        </label>
-        <a 
-          href="/recuperar" 
-          className="text-sm font-medium text-green-600 dark:text-green-400 hover:underline"
+      {/* Forgot password */}
+      <div className="flex items-center justify-end mb-6">
+        <button
+          type="button"
+          onClick={() => router.push('/recuperar')}
+          className="text-sm font-medium text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 transition-colors"
         >
-          {t('login.olvidarContrasena')}
-        </a>
+          {t('login.olvidasteContrasena')}
+        </button>
       </div>
 
       {/* Error message */}
@@ -230,22 +167,40 @@ export default function LoginForm() {
       {/* Submit button */}
       <button 
         type="submit" 
-        disabled={lockUntil && Date.now() < lockUntil || loading}
-        className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+        disabled={loading}
+        className="w-full py-3 px-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
       >
-        {loading ? t('login.iniciando') : t('login.iniciarSesion')}
+        {loading ? (
+          <>
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <span>{t('login.iniciandoSesion')}</span>
+          </>
+        ) : (
+          <>
+            <LogIn className="w-5 h-5" />
+            <span>{t('login.iniciarSesion')}</span>
+          </>
+        )}
       </button>
 
       {/* Sign up link */}
-      <div className="mt-6 text-center">
+      <div className="mt-8 text-center">
         <p className="text-sm text-gray-600 dark:text-gray-400">
           {t('login.noTienesCuenta')}{' '}
-          <a 
-            href="/register" 
-            className="font-medium text-green-600 dark:text-green-400 hover:underline"
+          <button
+            type="button"
+            onClick={() => router.push('/register')}
+            className="font-semibold text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 transition-colors"
           >
             {t('login.registrate')}
-          </a>
+          </button>
+        </p>
+      </div>
+
+      {/* Additional Info */}
+      <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
+        <p className="text-xs text-green-800 dark:text-green-300 text-center">
+          🌱 Al iniciar sesión, contribuyes a la reforestación de Manabí
         </p>
       </div>
     </form>

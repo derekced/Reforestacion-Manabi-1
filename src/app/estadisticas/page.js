@@ -5,6 +5,7 @@ import PageContainer from '@/components/PageContainer';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { TrendingUp, Target, Award, Calendar, TreePine, Users } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { getCurrentUser } from '@/lib/supabase-v2';
 
 function EstadisticasPage() {
   const { t } = useLanguage();
@@ -37,16 +38,29 @@ function EstadisticasPage() {
     };
   }, []);
 
-  const cargarDatos = () => {
+  const cargarDatos = async () => {
     try {
-      // Cargar usuario
-      const authUser = localStorage.getItem('authUser');
-      if (!authUser) return;
+      console.log('🔄 [Estadísticas] Cargando datos...');
       
-      const currentUser = JSON.parse(authUser);
+      // Cargar usuario desde Supabase Auth
+      const userData = await getCurrentUser();
+      if (!userData) {
+        console.log('⚠️ [Estadísticas] No hay usuario autenticado');
+        return;
+      }
+      
+      const userRole = userData.profile?.role || userData.user_metadata?.role || 'volunteer';
+      const currentUser = {
+        email: userData.email,
+        role: userRole,
+        nombre: userData.profile?.nombre || userData.user_metadata?.nombre || userData.email
+      };
       setUser(currentUser);
+      
+      const userId = userData.id || userData.profile?.id;
+      console.log('👤 [Estadísticas] Usuario:', currentUser.nombre, 'ID:', userId);
 
-      // Cargar meta semanal
+      // Cargar meta semanal (esto sigue en localStorage - preferencia personal)
       const savedMeta = localStorage.getItem('metaSemanal');
       if (savedMeta) {
         const meta = Number.parseInt(savedMeta);
@@ -54,32 +68,38 @@ function EstadisticasPage() {
         setTempMeta(meta);
       }
 
-      // Cargar registros de eventos
-      const data = localStorage.getItem('eventRegistrations');
-      if (data) {
-        const parsed = JSON.parse(data);
-        const confirmados = parsed.filter(r => r.estado === 'confirmado');
-        setRegistros(confirmados);
+      // Importar funciones de Supabase
+      const { getRegistrosUsuario, getAsistenciasUsuario } = await import('@/lib/supabase-v2');
+
+      // Cargar registros del usuario desde Supabase
+      const { data: registrosData, error: errorRegistros } = await getRegistrosUsuario(userId);
+      
+      if (errorRegistros) {
+        console.error('❌ [Estadísticas] Error al cargar registros:', errorRegistros);
+      } else {
+        console.log('✅ [Estadísticas] Registros cargados:', registrosData?.length || 0);
+        setRegistros(registrosData || []);
       }
       
-      // Calcular árboles REALMENTE plantados desde las asistencias registradas
-      const asistenciasData = localStorage.getItem('asistencias');
-      if (asistenciasData) {
-        const asistencias = JSON.parse(asistenciasData);
-        // Filtrar asistencias del usuario actual
-        const asistenciasUsuario = asistencias.filter(a => a.userEmail === currentUser.email);
-        // Sumar todos los árboles plantados
-        const totalArbolesPlantados = asistenciasUsuario.reduce((sum, asistencia) => {
-          return sum + (Number.parseInt(asistencia.arbolesPlantados, 10) || 0);
+      // Cargar asistencias confirmadas desde Supabase
+      const { data: asistenciasData, error: errorAsistencias } = await getAsistenciasUsuario(userId);
+      
+      if (errorAsistencias) {
+        console.error('❌ [Estadísticas] Error al cargar asistencias:', errorAsistencias);
+        setArbolesPlantados(0);
+      } else {
+        // Sumar todos los árboles plantados de asistencias confirmadas
+        const totalArbolesPlantados = (asistenciasData || []).reduce((sum, asistencia) => {
+          const arboles = asistencia.arboles_plantados || 0;
+          console.log(`  - Asistencia: ${arboles} árboles`);
+          return sum + arboles;
         }, 0);
         
-        console.log('Árboles plantados cargados:', totalArbolesPlantados, 'de', asistenciasUsuario.length, 'asistencias');
+        console.log('🌳 [Estadísticas] Total árboles plantados:', totalArbolesPlantados);
         setArbolesPlantados(totalArbolesPlantados);
-      } else {
-        setArbolesPlantados(0);
       }
     } catch (error) {
-      console.error('Error al cargar datos:', error);
+      console.error('❌ [Estadísticas] Error al cargar datos:', error);
     }
   };
 
@@ -103,8 +123,8 @@ function EstadisticasPage() {
 
   // Estadísticas adicionales
   const totalProyectos = registros.length;
-  const proyectosActivos = registros.filter(r => r.evento.estado === 'Activo').length;
-  const proyectosProximos = registros.filter(r => r.evento.estado === 'Próximo').length;
+  const proyectosActivos = registros.filter(r => r.proyectos?.estado === 'Activo').length;
+  const proyectosProximos = registros.filter(r => r.proyectos?.estado === 'Próximo').length;
 
   return (
     <PageContainer>
@@ -278,7 +298,8 @@ function EstadisticasPage() {
               </h3>
               <div className="space-y-3">
                 {registros.map((registro) => {
-                  const arbolesPorVoluntario = Math.floor(registro.evento.arboles / registro.evento.voluntarios);
+                  const proyecto = registro.proyectos;
+                  const arbolesPorVoluntario = proyecto ? Math.floor(proyecto.arboles / proyecto.voluntarios_esperados) : 0;
                   return (
                     <div 
                       key={registro.id}
@@ -286,10 +307,10 @@ function EstadisticasPage() {
                     >
                       <div className="flex-1">
                         <h4 className="font-semibold text-gray-800 dark:text-white">
-                          {registro.evento.nombre}
+                          {proyecto?.nombre || 'Proyecto sin nombre'}
                         </h4>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {registro.evento.fecha}
+                          {proyecto?.fecha || 'Fecha no disponible'}
                         </p>
                       </div>
                       <div className="text-right">

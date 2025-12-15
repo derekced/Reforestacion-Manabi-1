@@ -8,7 +8,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import Toast from '@/components/ui/Toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Plus, Edit2, Trash2, MapPin, Save, X, Trees, Calendar, Users, Leaf, CheckCircle, Clock, PlayCircle } from 'lucide-react';
-import { guardarProyectos, cargarProyectos } from '@/lib/proyectosUtils';
+import { getProyectos, createProyecto, updateProyecto, deleteProyecto, getPerfilesByRole } from '@/lib/supabase-v2';
 
 function AdminPage() {
   const { t } = useLanguage();
@@ -17,9 +17,11 @@ function AdminPage() {
   // Helper function to get translated status text
   const getStatusText = (status) => {
     switch (status) {
-      case 'completed': return t('admin.completedStatus');
-      case 'in_progress': return t('admin.inProgressStatus');
-      default: return t('admin.upcomingStatus');
+      case 'Completado': return t('admin.completedStatus');
+      case 'Activo': return t('admin.inProgressStatus');
+      case 'Cancelado': return t('admin.canceledStatus') || 'Cancelado';
+      case 'Próximo': return t('admin.upcomingStatus');
+      default: return status;
     }
   };
   
@@ -31,6 +33,7 @@ function AdminPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
   const [availableOrganizers, setAvailableOrganizers] = useState([]);
+  const [searchOrganizer, setSearchOrganizer] = useState('');
   const [formData, setFormData] = useState({
     id: '',
     nombre: '',
@@ -41,7 +44,7 @@ function AdminPage() {
     voluntarios: '',
     especies: '',
     fecha: '',
-    estado: 'upcoming',
+    estado: 'Próximo',
     descripcion: '',
     organizers: []
   });
@@ -75,94 +78,81 @@ function AdminPage() {
 
   // Verificar si el usuario es administrador
   useEffect(() => {
-    try {
-      const authUser = localStorage.getItem('authUser') || sessionStorage.getItem('authUser');
-      if (authUser) {
-        const user = JSON.parse(authUser);
-        if (user.role === 'admin') {
-          setIsAdmin(true);
-        } else {
-          // Si no es admin, redirigir a inicio
-          router.push('/');
-        }
-      }
-    } catch (e) {
-      router.push('/');
-    }
-  }, [router]);
-
-  // Cargar proyectos desde localStorage
-  useEffect(() => {
-    if (!isAdmin) return;
-    
-    const cargarProyectosDesdeStorage = () => {
-      console.log('🔄 Cargando proyectos en admin...');
-      
-      // Verificar si hay datos en localStorage
-      const savedData = localStorage.getItem('proyectos');
-      
-      if (savedData !== null) {
-        // Si existe la clave (aunque sea un array vacío), cargar lo que haya
-        const loadedProjects = cargarProyectos();
-        console.log('📦 Proyectos cargados:', loadedProjects.length);
-        setProyectos(loadedProjects);
-      } else {
-        // Solo crear proyectos de ejemplo si nunca se ha inicializado localStorage
-        console.log('⚠️ Primera vez: creando datos de ejemplo');
-        const defaultProjects = [
-          {
-            id: '1',
-            nombre: 'Reforestación Parque Nacional Machalilla',
-            ubicacion: 'Puerto López',
-            lat: -1.5514,
-            lng: -80.8186,
-            arboles: 2500,
-            voluntarios: 150,
-            especies: 'Guayacán, Ceibo, Fernán Sánchez',
-            fecha: '2025-02-15',
-            estado: 'Próximo',
-            descripcion: 'Recuperación de bosque seco tropical en el Parque Nacional Machalilla',
-            organizers: ['organizer1@example.com']
-          },
-          {
-            id: '2',
-            nombre: 'Bosque Urbano Manta',
-            ubicacion: 'Manta',
-            lat: -0.9537,
-            lng: -80.7089,
-            arboles: 1200,
-            voluntarios: 80,
-            especies: 'Neem, Almendro, Laurel',
-            fecha: '2025-01-20',
-            estado: 'Activo',
-            descripcion: 'Creación de bosque urbano en la zona costera de Manta',
-            organizers: []
+    const checkAdmin = async () => {
+      try {
+        const { getCurrentUser } = await import('@/lib/supabase-v2');
+        const user = await getCurrentUser();
+        
+        if (user && user.profile) {
+          const role = user.profile.role || user.user_metadata?.role || 'volunteer';
+          console.log('🔐 Verificando acceso admin. Rol:', role);
+          
+          if (role === 'admin') {
+            setIsAdmin(true);
+          } else {
+            router.push('/');
           }
-        ];
-        guardarProyectos(defaultProjects);
-        setProyectos(defaultProjects);
+        } else {
+          router.push('/login');
+        }
+      } catch (e) {
+        console.error('Error verificando admin:', e);
+        router.push('/');
       }
     };
     
-    cargarProyectosDesdeStorage();
+    checkAdmin();
+  }, [router]);
+
+  // Cargar proyectos desde Supabase
+  useEffect(() => {
+    if (!isAdmin) return;
+    
+    const cargarProyectosDesdeSupabase = async () => {
+      console.log('🔄 Cargando proyectos desde Supabase...');
+      
+      try {
+        const { data, error } = await getProyectos();
+        
+        if (error) {
+          console.error('Error cargando proyectos:', error);
+          showToast('Error al cargar proyectos', 'error');
+          setProyectos([]);
+          return;
+        }
+        
+        console.log('📦 Proyectos cargados desde Supabase:', data?.length || 0);
+        setProyectos(data || []);
+      } catch (err) {
+        console.error('Error en cargarProyectosDesdeSupabase:', err);
+        setProyectos([]);
+      }
+    };
+    
+    cargarProyectosDesdeSupabase();
     
     // Escuchar el evento projectsUpdated para recargar
     const handleProjectsUpdate = () => {
       console.log('🔔 Evento projectsUpdated recibido en admin');
-      cargarProyectosDesdeStorage();
+      cargarProyectosDesdeSupabase();
     };
     
     window.addEventListener('projectsUpdated', handleProjectsUpdate);
     
-    // Cargar lista de organizadores disponibles (usuarios con role === 'organizer')
-    try {
-      const usuariosRaw = localStorage.getItem('usuarios') || '[]';
-      const usuarios = JSON.parse(usuariosRaw);
-      const orgs = usuarios.filter(u => u.role === 'organizer').map(u => ({ email: u.email, nombre: u.nombre }));
-      setAvailableOrganizers(orgs);
-    } catch (e) {
-      setAvailableOrganizers([]);
-    }
+    // Cargar organizadores desde Supabase
+    const cargarOrganizadores = async () => {
+      console.log('👥 Cargando organizadores desde Supabase...');
+      const { data, error } = await getPerfilesByRole('organizer');
+      if (error) {
+        console.error('Error cargando organizadores:', error);
+        setAvailableOrganizers([]);
+      } else {
+        console.log('✅ Organizadores cargados:', data?.length || 0);
+        setAvailableOrganizers(data || []);
+      }
+    };
+    
+    cargarOrganizadores();
     
     return () => {
       window.removeEventListener('projectsUpdated', handleProjectsUpdate);
@@ -222,35 +212,62 @@ function AdminPage() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     try {
+      // Convertir especies de string a array
+      const especiesArray = typeof formData.especies === 'string' 
+        ? formData.especies.split(',').map(e => e.trim()).filter(e => e)
+        : formData.especies;
+      
+      const proyectoData = {
+        nombre: formData.nombre,
+        ubicacion: formData.ubicacion,
+        descripcion: formData.descripcion,
+        lat: parseFloat(formData.lat),
+        lng: parseFloat(formData.lng),
+        fecha: formData.fecha,
+        arboles: parseInt(formData.arboles),
+        voluntarios_esperados: parseInt(formData.voluntarios),
+        especies: especiesArray,
+        estado: formData.estado || 'Próximo'
+      };
+      
       if (editingProject) {
         // Actualizar proyecto existente
-        const updatedProjects = proyectos.map(p => 
-          p.id === editingProject.id ? { ...formData, id: editingProject.id } : p
-        );
-        setProyectos(updatedProjects);
-        guardarProyectos(updatedProjects);
+        const { error } = await updateProyecto(editingProject, proyectoData);
+        
+        if (error) {
+          console.error('Error actualizando proyecto:', error);
+          showToast('Error al actualizar proyecto', 'error');
+          return;
+        }
+        
         showToast(t('admin.saveSuccess'), 'success');
       } else {
         // Crear nuevo proyecto
-        const newProject = {
-          ...formData,
-          id: Date.now().toString()
-        };
-        const updatedProjects = [...proyectos, newProject];
-        setProyectos(updatedProjects);
-        guardarProyectos(updatedProjects);
+        const { error } = await createProyecto(proyectoData);
+        
+        if (error) {
+          console.error('Error creando proyecto:', error);
+          showToast('Error al crear proyecto', 'error');
+          return;
+        }
+        
         showToast(t('admin.saveSuccess'), 'success');
       }
+      
+      // Recargar proyectos desde Supabase
+      const { data: proyectosActualizados } = await getProyectos();
+      setProyectos(proyectosActualizados || []);
       
       // Disparar evento para actualizar el mapa
       window.dispatchEvent(new Event('projectsUpdated'));
       
       closeModal();
     } catch (error) {
+      console.error('Error en handleSubmit:', error);
       showToast(t('admin.saveError', 'Error saving project'), 'error');
     }
   };
@@ -272,54 +289,30 @@ function AdminPage() {
     setProjectToDelete(id);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (projectToDelete) {
       console.log('🗑️ Iniciando eliminación del proyecto:', projectToDelete);
       
-      // Eliminar el proyecto
-      const updatedProjects = proyectos.filter(p => p.id !== projectToDelete);
-      console.log('📊 Proyectos antes:', proyectos.length, '→ Proyectos después:', updatedProjects.length);
+      // Eliminar el proyecto de Supabase
+      const { error } = await deleteProyecto(projectToDelete);
       
-      setProyectos(updatedProjects);
-      guardarProyectos(updatedProjects); // Usar la función que convierte estados a inglés
-      
-      // Eliminar todos los registros de usuarios para este proyecto
-      try {
-        const registrationsData = localStorage.getItem('eventRegistrations');
-        if (registrationsData) {
-          const registrations = JSON.parse(registrationsData);
-          const updatedRegistrations = registrations.filter(r => r.projectId !== projectToDelete);
-          localStorage.setItem('eventRegistrations', JSON.stringify(updatedRegistrations));
-          console.log('👥 Registros eliminados:', registrations.length - updatedRegistrations.length);
-          
-          // Disparar evento para actualizar los registros en los perfiles de usuarios
-          window.dispatchEvent(new Event('registrationChange'));
-        }
-        
-        // Eliminar asistencias relacionadas con este proyecto
-        const asistenciasData = localStorage.getItem('asistencias');
-        if (asistenciasData) {
-          const asistencias = JSON.parse(asistenciasData);
-          const updatedAsistencias = asistencias.filter(a => a.projectId !== projectToDelete);
-          localStorage.setItem('asistencias', JSON.stringify(updatedAsistencias));
-          console.log('✅ Asistencias eliminadas:', asistencias.length - updatedAsistencias.length);
-          
-          // Disparar evento para actualizar las asistencias
-          window.dispatchEvent(new Event('asistenciaChange'));
-        }
-      } catch (error) {
-        console.error('❌ Error al eliminar registros relacionados:', error);
+      if (error) {
+        console.error('❌ Error al eliminar proyecto:', error);
+        showToast('Error al eliminar el proyecto', 'error');
+        setProjectToDelete(null);
+        return;
       }
       
-      // Disparar evento para actualizar el mapa
-      console.log('� Disparando evento projectsUpdated');
-      window.dispatchEvent(new Event('projectsUpdated'));
+      console.log('✅ Proyecto eliminado exitosamente de Supabase');
       
-      // Verificar que se guardó correctamente
-      setTimeout(() => {
-        const verificar = localStorage.getItem('proyectos');
-        console.log('🔍 Verificación después de eliminar:', JSON.parse(verificar).length, 'proyectos en localStorage');
-      }, 100);
+      // Recargar proyectos desde Supabase
+      const { data } = await getProyectos();
+      setProyectos(data || []);
+      console.log('📊 Proyectos recargados desde Supabase:', data?.length || 0);
+      
+      // Disparar evento para actualizar el mapa
+      console.log('🗺 Disparando evento projectsUpdated');
+      window.dispatchEvent(new Event('projectsUpdated'));
       
       setProjectToDelete(null);
       showToast(t('admin.deleteSuccess'), 'success');
@@ -338,7 +331,7 @@ function AdminPage() {
       voluntarios: '',
       especies: '',
       fecha: '',
-      estado: 'upcoming',
+      estado: 'Próximo',
       descripcion: '',
       organizers: []
     });
@@ -360,7 +353,7 @@ function AdminPage() {
       voluntarios: '',
       especies: '',
       fecha: '',
-      estado: 'upcoming',
+      estado: 'Próximo',
       descripcion: '',
       organizers: []
     });
@@ -432,8 +425,8 @@ function AdminPage() {
           ) : (
             proyectos.map(project => {
               // Determinar icono de estado
-              const StatusIcon = project.estado === 'completed' ? CheckCircle : 
-                                 project.estado === 'in_progress' ? PlayCircle : Clock;
+              const StatusIcon = project.estado === 'Completado' ? CheckCircle : 
+                                 project.estado === 'Activo' ? PlayCircle : Clock;
               
               return (
                 <div key={project.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6">
@@ -442,8 +435,9 @@ function AdminPage() {
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-xl font-semibold text-gray-800 dark:text-white">{project.nombre}</h3>
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
-                          project.estado === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
-                          project.estado === 'in_progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
+                          project.estado === 'Completado' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                          project.estado === 'Activo' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
+                          project.estado === 'Cancelado' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
                           'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
                         }`}>
                           <StatusIcon className="w-3.5 h-3.5" />
@@ -719,9 +713,10 @@ function AdminPage() {
                       required
                       className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     >
-                      <option value="upcoming">{t('admin.upcomingStatus')}</option>
-                      <option value="in_progress">{t('admin.inProgressStatus')}</option>
-                      <option value="completed">{t('admin.completedStatus')}</option>
+                      <option value="Próximo">{t('admin.upcomingStatus')}</option>
+                      <option value="Activo">{t('admin.inProgressStatus')}</option>
+                      <option value="Completado">{t('admin.completedStatus')}</option>
+                      <option value="Cancelado">{t('admin.canceledStatus') || 'Cancelado'}</option>
                     </select>
                   </div>
                 </div>
@@ -730,17 +725,44 @@ function AdminPage() {
                   {/* Organizadores asignados */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('admin.organizadores')}</label>
-                    <div className="flex flex-col gap-2">
+                    
+                    {/* Barra de búsqueda */}
+                    <input
+                      type="text"
+                      placeholder="Buscar organizador por nombre..."
+                      value={searchOrganizer}
+                      onChange={(e) => setSearchOrganizer(e.target.value)}
+                      className="w-full px-4 py-2 mb-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    />
+                    
+                    <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
                       {availableOrganizers.length === 0 ? (
                         <p className="text-sm text-gray-500">{t('admin.noOrganizersAvailable')}</p>
                       ) : (
                         <div className="flex flex-wrap gap-2">
-                          {availableOrganizers.map(org => (
-                            <label key={org.email} className="inline-flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 text-sm">
-                              <input type="checkbox" checked={Array.isArray(formData.organizers) && formData.organizers.includes(org.email)} onChange={(e) => handleOrganizersChange(org.email, e.target.checked)} />
-                              <span className="ml-1">{org.nombre} <span className="text-xs text-gray-500">({org.email})</span></span>
-                            </label>
-                          ))}
+                          {availableOrganizers
+                            .filter(org => 
+                              org.nombre.toLowerCase().includes(searchOrganizer.toLowerCase()) ||
+                              org.email.toLowerCase().includes(searchOrganizer.toLowerCase())
+                            )
+                            .map(org => (
+                              <label key={org.email} className="inline-flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors">
+                                <input 
+                                  type="checkbox" 
+                                  checked={Array.isArray(formData.organizers) && formData.organizers.includes(org.email)} 
+                                  onChange={(e) => handleOrganizersChange(org.email, e.target.checked)}
+                                  className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                                />
+                                <span className="ml-1">{org.nombre} <span className="text-xs text-gray-500">({org.email})</span></span>
+                              </label>
+                            ))
+                          }
+                          {availableOrganizers.filter(org => 
+                            org.nombre.toLowerCase().includes(searchOrganizer.toLowerCase()) ||
+                            org.email.toLowerCase().includes(searchOrganizer.toLowerCase())
+                          ).length === 0 && searchOrganizer && (
+                            <p className="text-sm text-gray-500 italic">No se encontraron organizadores con ese nombre</p>
+                          )}
                         </div>
                       )}
                     </div>

@@ -6,7 +6,7 @@ import PageContainer from '@/components/PageContainer';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { BarChart3, Trees, Users, MapPin, Search } from 'lucide-react';
-import { cargarProyectos } from '@/lib/proyectosUtils';
+import { getProyectos, getEstadisticasGlobales } from '@/lib/supabase-v2';
 
 // Importar el mapa de forma dinámica para evitar problemas de SSR
 const MapaProyectos = dynamic(
@@ -60,38 +60,47 @@ function ProyectosPage() {
     };
   }, []);
 
-  const cargarEstadisticas = () => {
+  const cargarEstadisticas = async () => {
     try {
-      // 1. Total de proyectos
-      const proyectos = cargarProyectos();
+      console.log('🔄 [Proyectos] Cargando estadísticas...');
       
-      // 2. Árboles plantados REALES (de asistencias)
-      const asistenciasData = localStorage.getItem('asistencias');
-      const asistencias = asistenciasData ? JSON.parse(asistenciasData) : [];
-      const totalArboles = asistencias.reduce((sum, asistencia) => {
-        return sum + (Number.parseInt(asistencia.arbolesPlantados, 10) || 0);
-      }, 0);
+      // Cargar estadísticas desde Supabase
+      const { data: estadisticas, error } = await getEstadisticasGlobales();
       
-      // 3. Total de voluntarios únicos que se registraron a proyectos
-      const registrosData = localStorage.getItem('eventRegistrations');
-      const registros = registrosData ? JSON.parse(registrosData) : [];
+      if (error) {
+        console.error('❌ [Proyectos] Error al cargar estadísticas:', error);
+        // Fallback a localStorage si falla
+        const proyectosData = localStorage.getItem('proyectos') || '[]';
+        const proyectos = JSON.parse(proyectosData);
+        setStats({
+          totalProyectos: proyectos.length,
+          arbolesPlantados: 0,
+          totalVoluntarios: 0,
+        });
+        return;
+      }
       
-      // Obtener emails únicos de usuarios registrados
-      const voluntariosUnicos = new Set(registros.map(r => r.userEmail));
+      console.log('📊 [Proyectos] Datos recibidos:', estadisticas);
       
       setStats({
-        totalProyectos: proyectos.length,
-        arbolesPlantados: totalArboles,
-        totalVoluntarios: voluntariosUnicos.size,
+        totalProyectos: estadisticas?.total_proyectos || 0,
+        arbolesPlantados: estadisticas?.arboles_plantados || 0,
+        totalVoluntarios: estadisticas?.voluntarios_unicos || 0,
       });
       
-      console.log('Estadísticas cargadas:', {
-        proyectos: proyectos.length,
-        arboles: totalArboles,
-        voluntarios: voluntariosUnicos.size
+      console.log('✅ [Proyectos] Estadísticas actualizadas:', {
+        proyectos: estadisticas?.total_proyectos || 0,
+        arboles: estadisticas?.arboles_plantados || 0,
+        voluntarios: estadisticas?.voluntarios_unicos || 0
       });
     } catch (error) {
-      console.error('Error al cargar estadísticas:', error);
+      console.error('❌ [Proyectos] Error al cargar estadísticas:', error);
+      // Fallback a valores por defecto
+      setStats({
+        totalProyectos: 0,
+        arbolesPlantados: 0,
+        totalVoluntarios: 0,
+      });
     }
   };
 

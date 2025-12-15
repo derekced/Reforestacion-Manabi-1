@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Trees, Calendar, Users } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { cargarProyectos } from '@/lib/proyectosUtils';
+import { getProyectos, getEstadisticasAdmin } from '@/lib/supabase-v2';
 
 export default function WidgetAdmin() {
   const { t } = useLanguage();
@@ -29,14 +29,21 @@ export default function WidgetAdmin() {
     };
   }, []);
 
-  const cargarEstadisticas = () => {
+  const cargarEstadisticas = async () => {
     try {
-      const proyectos = cargarProyectos();
+      // Cargar proyectos desde Supabase
+      const { data: proyectos, error: proyectosError } = await getProyectos();
+      
+      if (proyectosError) {
+        console.error('Error al cargar proyectos:', proyectosError);
+        return;
+      }
+      
       if (proyectos && proyectos.length > 0) {
         const activos = proyectos.filter(p => p.estado === 'Activo').length;
         
         // Calcular total de voluntarios sumando de todos los proyectos
-        const totalVol = proyectos.reduce((sum, p) => sum + (p.voluntarios || 0), 0);
+        const totalVol = proyectos.reduce((sum, p) => sum + (p.voluntarios_requeridos || 0), 0);
         
         setStats({
           totalProyectos: proyectos.length,

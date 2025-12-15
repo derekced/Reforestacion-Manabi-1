@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Users, Search, Mail, Phone, Calendar, Award, X, FileText, MapPin, Trash, CheckCircle } from 'lucide-react';
 import ConfirmModal from './ui/ConfirmModal';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { cargarProyectos as cargarProyectosUtil } from '@/lib/proyectosUtils';
+import { getProyectos, getRegistrosProyecto } from '@/lib/supabase-v2';
 
 export default function GestionVoluntarios() {
   const { t } = useLanguage();
@@ -13,6 +13,7 @@ export default function GestionVoluntarios() {
   const [voluntarios, setVoluntarios] = useState([]);
   const [busqueda, setBusqueda] = useState('');
   const [voluntarioDetalle, setVoluntarioDetalle] = useState(null);
+  const [contadoresVoluntarios, setContadoresVoluntarios] = useState({});
 
   useEffect(() => {
     cargarProyectos();
@@ -35,29 +36,72 @@ export default function GestionVoluntarios() {
     };
   }, []);
 
-  const cargarProyectos = () => {
+  const cargarProyectos = async () => {
     try {
-      const proyectosData = cargarProyectosUtil();
-      setProyectos(proyectosData);
+      const { data, error } = await getProyectos();
+      
+      if (error) {
+        console.error('❌ [GestionVoluntarios] Error al cargar proyectos:', error);
+        return;
+      }
+      
+      console.log('✅ [GestionVoluntarios] Proyectos cargados:', data?.length || 0);
+      setProyectos(data || []);
+      
+      // Cargar contadores de voluntarios para cada proyecto
+      const contadores = {};
+      for (const proyecto of data || []) {
+        const { data: registros, error: errorRegistros } = await getRegistrosProyecto(proyecto.id);
+        if (!errorRegistros) {
+          contadores[proyecto.id] = registros?.length || 0;
+          console.log(`📊 [GestionVoluntarios] Proyecto "${proyecto.nombre}": ${registros?.length || 0} voluntarios`);
+        }
+      }
+      setContadoresVoluntarios(contadores);
+      console.log('✅ [GestionVoluntarios] Contadores cargados:', contadores);
     } catch (error) {
-      console.error('Error al cargar proyectos:', error);
+      console.error('❌ [GestionVoluntarios] Error al cargar proyectos:', error);
     }
   };
 
-  const cargarVoluntariosPorProyecto = (proyecto) => {
+  const cargarVoluntariosPorProyecto = async (proyecto) => {
     try {
-      const registrosData = localStorage.getItem('eventRegistrations');
-      const registros = registrosData ? JSON.parse(registrosData) : [];
+      console.log('🔍 [GestionVoluntarios] Cargando voluntarios del proyecto:', proyecto.id, proyecto.nombre);
       
-      // Solo mostrar voluntarios con registros confirmados (no cancelados)
-      const voluntariosProyecto = registros.filter(
-        r => r.evento?.id === proyecto.id && r.estado === 'confirmado'
-      );
+      const { data, error } = await getRegistrosProyecto(proyecto.id);
       
-      setVoluntarios(voluntariosProyecto);
+      if (error) {
+        console.error('❌ [GestionVoluntarios] Error al cargar voluntarios:', error);
+        setVoluntarios([]);
+        return;
+      }
+      
+      console.log('📊 [GestionVoluntarios] Registros recibidos de Supabase:', data?.length || 0);
+      console.log('📋 [GestionVoluntarios] Detalle registros:', data);
+      
+      // Formatear los registros para el componente
+      const voluntariosFormateados = (data || []).map(r => ({
+        id: r.id,
+        estado: r.estado,
+        userEmail: r.user_email,
+        userName: r.user_name,
+        telefono: r.telefono,
+        edad: r.edad,
+        experiencia: r.experiencia,
+        disponibilidad: r.disponibilidad,
+        transporte: r.transporte,
+        comentarios: r.comentarios,
+        fechaRegistro: r.fecha_registro,
+        evento: { id: proyecto.id }
+      }));
+      
+      console.log('✅ [GestionVoluntarios] Voluntarios formateados:', voluntariosFormateados.length);
+      console.log('👥 [GestionVoluntarios] Lista final:', voluntariosFormateados);
+      
+      setVoluntarios(voluntariosFormateados);
       setProyectoSeleccionado(proyecto);
     } catch (error) {
-      console.error('Error al cargar voluntarios:', error);
+      console.error('❌ [GestionVoluntarios] Error al cargar voluntarios:', error);
     }
   };
 
@@ -161,9 +205,7 @@ export default function GestionVoluntarios() {
           <div className="space-y-2 max-h-[600px] overflow-y-auto">
             {proyectos.length > 0 ? (
               proyectos.map((proyecto) => {
-                const registrosData = localStorage.getItem('eventRegistrations');
-                const registros = registrosData ? JSON.parse(registrosData) : [];
-                const cantidadVoluntarios = registros.filter(r => r.evento?.id === proyecto.id).length;
+                const cantidadVoluntarios = contadoresVoluntarios[proyecto.id] || 0;
                 
                 return (
                   <button

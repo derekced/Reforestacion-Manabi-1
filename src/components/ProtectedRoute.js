@@ -2,25 +2,38 @@
 
 import { useEffect, useState } from 'react';
 import AuthRequired from './AuthRequired';
+import { getCurrentUser } from '@/lib/supabase-v2';
 
 export default function ProtectedRoute({ children }) {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      const authUser = localStorage.getItem("authUser") || sessionStorage.getItem("authUser");
-      
-      if (!authUser) {
+    const checkAuth = async () => {
+      console.log('🔐 ProtectedRoute: Iniciando verificación de acceso...');
+      try {
+        const user = await getCurrentUser();
+        console.log('🔐 ProtectedRoute: Usuario obtenido:', user ? 'SÍ' : 'NO');
+        setIsAuthorized(!!user);
+      } catch (e) {
+        console.error('🔐 ProtectedRoute: Error checking auth:', e);
         setIsAuthorized(false);
-      } else {
-        setIsAuthorized(true);
+      } finally {
+        console.log('🔐 ProtectedRoute: Verificación completada');
+        setIsLoading(false);
       }
-    } catch (e) {
-      setIsAuthorized(false);
-    } finally {
+    };
+    
+    // Agregar timeout de seguridad
+    const timeout = setTimeout(() => {
+      console.warn('⚠️ ProtectedRoute: Timeout alcanzado, asumiendo no autorizado');
       setIsLoading(false);
-    }
+      setIsAuthorized(false);
+    }, 3000); // 3 segundos
+    
+    checkAuth().finally(() => clearTimeout(timeout));
+    
+    return () => clearTimeout(timeout);
   }, []);
 
   if (isLoading) {

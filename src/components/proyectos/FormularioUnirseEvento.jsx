@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, UserCircle2, Mail, Phone, CalendarDays, MessageSquare, AlertCircle, CheckCircle2, MoveLeft, CheckCheck, Sprout } from 'lucide-react';
+import { X, UserCircle2, Mail, Phone, CalendarDays, MessageSquare, AlertCircle, CheckCircle2, MoveLeft, CheckCheck, Sprout, Calendar } from 'lucide-react';
 import ConfirmModal from '../ui/ConfirmModal';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { getCurrentUser, registrarEnEvento, verificarRegistro } from '@/lib/supabase-v2';
 
 export default function FormularioUnirseEvento({ evento, isOpen, onClose }) {
   const { t } = useLanguage();
@@ -24,23 +25,22 @@ export default function FormularioUnirseEvento({ evento, isOpen, onClose }) {
 
   useEffect(() => {
     if (isOpen) {
-      try {
-        const authUserLocal = localStorage.getItem('authUser');
-        const authUserSession = sessionStorage.getItem('authUser');
-        const authRaw = authUserLocal || authUserSession;
-        
-        if (authRaw) {
-          const userData = JSON.parse(authRaw);
-          setUser(userData);
-          setFormData(prev => ({
-            ...prev,
-            nombre: userData.name || userData.username || '',
-            email: userData.email || ''
-          }));
+      const loadUser = async () => {
+        try {
+          const userData = await getCurrentUser();
+          if (userData) {
+            setUser(userData);
+            setFormData(prev => ({
+              ...prev,
+              nombre: userData.user_metadata?.nombre || userData.email?.split('@')[0] || '',
+              email: userData.email || ''
+            }));
+          }
+        } catch (e) {
+          console.error('Error loading user:', e);
         }
-      } catch (e) {
-        console.error('Error loading user:', e);
-      }
+      };
+      loadUser();
     }
   }, [isOpen]);
 
@@ -102,57 +102,60 @@ export default function FormularioUnirseEvento({ evento, isOpen, onClose }) {
     setConfirmModalOpen(false);
     setPendingSubmit(false);
     try {
-      const registrosRaw = localStorage.getItem('eventRegistrations') || '[]';
-      const registros = JSON.parse(registrosRaw);
+      // Obtener usuario actual
+      const user = await getCurrentUser();
+      if (!user) {
+        setErrors({ general: 'Debes iniciar sesión para registrarte' });
+        setIsSubmitting(false);
+        return;
+      }
+
+      const userId = user.id || user.profile?.id;
+      if (!userId) {
+        setErrors({ general: 'No se pudo obtener tu identificación de usuario' });
+        setIsSubmitting(false);
+        return;
+      }
+
+      console.log('🔍 Verificando registro para userId:', userId, 'proyectoId:', evento.id);
       
-      // Debug: mostrar registros del usuario para este evento
-      const registrosEvento = registros.filter(r => r.evento && r.evento.id === evento.id && r.userEmail === formData.email);
-      console.log('🔍 Registros encontrados para este evento:', registrosEvento);
-      
-      // Solo verificar registros confirmados (no cancelados)
-      // Si no tiene estado, se considera confirmado (registros antiguos)
-      const yaRegistrado = registros.find(
-        r => r.evento && r.evento.id === evento.id && r.userEmail === formData.email && (!r.estado || r.estado === 'confirmado')
-      );
+      // Verificar si ya está registrado
+      const { data: yaRegistrado } = await verificarRegistro(userId, evento.id);
       
       if (yaRegistrado) {
-        console.log('⚠️ Ya registrado:', yaRegistrado);
+        console.log('⚠️ Ya registrado en este proyecto:', yaRegistrado);
         setErrors({ general: 'Ya estás registrado en este evento' });
         setIsSubmitting(false);
         return;
       }
       
       console.log('✅ Permitiendo registro nuevo');
-      const nuevoRegistro = {
-        id: `${evento.id}-${formData.email}-${Date.now()}`,
-        evento: {
-          id: evento.id,
-          nombre: evento.nombre,
-          fecha: evento.fecha,
-          ubicacion: evento.ubicacion,
-          lat: evento.lat,
-          lng: evento.lng,
-          estado: evento.estado,
-          especies: evento.especies || [],
-          arboles: evento.arboles || 0,
-          voluntarios: evento.voluntarios || 0,
-          descripcion: evento.descripcion || ''
-        },
-        userEmail: formData.email,
-        userName: formData.nombre,
+      
+      // Registrar en Supabase
+      const { error: registroError } = await registrarEnEvento({
+        proyecto_id: evento.id,
+        usuario_id: userId,
+        user_email: user.email,
+        user_name: formData.nombre || user.profile?.nombre || user.email,
         telefono: formData.telefono,
         edad: Number.parseInt(formData.edad, 10),
         experiencia: formData.experiencia,
         disponibilidad: formData.disponibilidad,
         transporte: formData.transporte,
-        comentarios: formData.comentarios,
-        estado: 'confirmado',
-        fechaRegistro: new Date().toISOString()
-      };
-      registros.push(nuevoRegistro);
-      localStorage.setItem('eventRegistrations', JSON.stringify(registros));
-      globalThis.window.dispatchEvent(new Event('registrationChange'));
-      globalThis.window.dispatchEvent(new Event('storage'));
+        comentarios: formData.comentarios || null,
+        estado: 'confirmado'
+      });
+      
+      if (registroError) {
+        console.error('❌ Error registrando:', registroError);
+        setErrors({ general: registroError.message || 'Error al procesar el registro. Inténtalo de nuevo.' });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      console.log('✅ Registro exitoso en Supabase');
+      
+      // Registro exitoso
       setShowSuccess(true);
       try {
         globalThis.window.dispatchEvent(new CustomEvent('app:toast', {
@@ -164,6 +167,10 @@ export default function FormularioUnirseEvento({ evento, isOpen, onClose }) {
       } catch (e) {
         console.error('Error showing toast:', e);
       }
+      
+      // Disparar evento para actualizar UI
+      globalThis.window.dispatchEvent(new Event('registrationChange'));
+      
       setTimeout(() => {
         handleClose();
       }, 2000);
@@ -176,7 +183,7 @@ export default function FormularioUnirseEvento({ evento, isOpen, onClose }) {
 
   const handleClose = () => {
     setFormData({
-      nombre: user?.name || user?.username || '',
+      nombre: user?.user_metadata?.nombre || user?.email?.split('@')[0] || '',
       email: user?.email || '',
       telefono: '',
       edad: '',
@@ -223,15 +230,50 @@ export default function FormularioUnirseEvento({ evento, isOpen, onClose }) {
           </div>
         </div>
 
-        {/* Success Message */}
+        {/* Success Message - Modal Mejorado */}
         {showSuccess && (
-          <div className="mx-6 mt-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-            <div className="flex items-center gap-3 text-green-800 dark:text-green-200">
-              <CheckCircle2 className="shrink-0" size={24} />
-              <div>
-                <p className="font-semibold">{t('modal.registroExitoso')}</p>
-                <p className="text-sm">{t('modal.mensajeExito')}</p>
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-50 rounded-2xl">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 m-6 max-w-md w-full shadow-2xl border-2 border-green-500 animate-in fade-in zoom-in duration-300">
+              {/* Icono de éxito animado */}
+              <div className="flex justify-center mb-6">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-75"></div>
+                  <div className="relative bg-gradient-to-br from-green-500 to-green-600 rounded-full p-4 shadow-xl">
+                    <CheckCircle2 className="w-12 h-12 text-white" strokeWidth={3} />
+                  </div>
+                </div>
               </div>
+              
+              {/* Título y mensaje */}
+              <div className="text-center space-y-3">
+                <h3 className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  ¡Registro Exitoso! 🎉
+                </h3>
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                  Te has registrado exitosamente en <span className="font-semibold text-green-600 dark:text-green-400">{evento?.nombre}</span>
+                </p>
+                <div className="pt-4 space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                  <p className="flex items-center justify-center gap-2">
+                    <Calendar className="w-4 h-4 text-blue-500" />
+                    <span>Fecha: <strong>{evento?.fecha}</strong></span>
+                  </p>
+                  <p className="flex items-center justify-center gap-2">
+                    <MapPin className="w-4 h-4 text-red-500" />
+                    <span>{evento?.ubicacion}</span>
+                  </p>
+                </div>
+                <div className="pt-2 text-xs text-gray-500 dark:text-gray-500 italic">
+                  Recibirás un correo de confirmación pronto. ¡Gracias por tu compromiso con el planeta! 🌱
+                </div>
+              </div>
+              
+              {/* Botón de cerrar */}
+              <button
+                onClick={handleCloseModal}
+                className="mt-6 w-full px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+              >
+                Entendido
+              </button>
             </div>
           </div>
         )}

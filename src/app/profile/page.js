@@ -8,23 +8,30 @@ import WidgetImpacto from "@/components/WidgetImpacto";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { PageContainer } from "@/components/PageContainer";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { getCurrentUser } from "@/lib/supabase-v2";
 
 function ProfilePage() {
   const { t } = useLanguage();
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    try {
-      const authUserLocal = localStorage.getItem('authUser');
-      const authUserSession = sessionStorage.getItem('authUser');
-      const authRaw = authUserLocal || authUserSession;
-      
-      if (authRaw) {
-        setUser(JSON.parse(authRaw));
+    const loadUser = async () => {
+      try {
+        const userData = await getCurrentUser();
+        if (!userData) return;
+        
+        const userRole = userData.profile?.role || userData.user_metadata?.role || 'volunteer';
+        setUser({
+          email: userData.email,
+          role: userRole,
+          nombre: userData.profile?.nombre || userData.user_metadata?.nombre || userData.email
+        });
+      } catch (e) {
+        console.error('Error loading user:', e);
       }
-    } catch (e) {
-      console.error('Error loading user:', e);
-    }
+    };
+    
+    loadUser();
   }, []);
   
   return (

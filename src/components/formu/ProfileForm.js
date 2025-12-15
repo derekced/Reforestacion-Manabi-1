@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { getCurrentUser, updateUserProfile, updatePassword } from "@/lib/supabase-v2";
 
 export default function ProfileForm() {
   const router = useRouter();
@@ -21,25 +22,25 @@ export default function ProfileForm() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Cargar datos del usuario al montar
+  // Cargar datos del usuario desde Supabase
   useEffect(() => {
-    try {
-      const user = JSON.parse(localStorage.getItem("authUser") || sessionStorage.getItem("authUser"));
+    const loadUser = async () => {
+      const user = await getCurrentUser();
       if (!user) {
         router.push("/login");
         return;
       }
+      
       setForm(f => ({
         ...f,
-        nombre: user.name || "",
+        nombre: user.user_metadata?.nombre || user.email?.split('@')[0] || "",
         email: user.email || "",
-        role: user.role || "volunteer",
-        organizationName: user.organizationName || "",
-        organizationWebsite: user.organizationWebsite || "",
+        role: user.user_metadata?.role || "volunteer",
+        organizationName: user.user_metadata?.organizationName || "",
+        organizationWebsite: user.user_metadata?.organizationWebsite || "",
       }));
-    } catch (e) {
-      router.push("/login");
-    }
+    };
+    loadUser();
   }, [router]);
 
   const handleChange = e => {
@@ -69,39 +70,38 @@ export default function ProfileForm() {
 
     setLoading(true);
     try {
-      // Simular actualización (aquí irá tu lógica de API)
-      await new Promise(r => setTimeout(r, 600));
+      // Actualizar perfil en Supabase
+      const { error: updateError } = await updateUserProfile({
+        nombre: form.nombre,
+        telefono: null, // mantener teléfono existente
+        ciudad: null, // mantener ciudad existente
+        organizationName: form.organizationName || null,
+        organizationWebsite: form.organizationWebsite || null,
+      });
       
-      // Actualizar storage
-      const storage = localStorage.getItem("authUser") ? localStorage : sessionStorage;
-      const updatedUser = {
-        name: form.nombre,
-        email: form.email,
-        avatar: "/avatars/user.jpg", // mantener avatar existente o usar uno por defecto
-        role: form.role || 'volunteer',
-        organizationName: form.organizationName || undefined,
-        organizationWebsite: form.organizationWebsite || undefined,
-      };
-      storage.setItem("authUser", JSON.stringify(updatedUser));
-      // También persistir en la lista global de usuarios si existe
-      try {
-        const usuarios = JSON.parse(localStorage.getItem('usuarios') || '[]');
-        const idx = usuarios.findIndex(u => u.email === form.email);
-        if (idx > -1) {
-          usuarios[idx] = { ...usuarios[idx], nombre: form.nombre, role: form.role, organizationName: form.organizationName, organizationWebsite: form.organizationWebsite };
-        } else {
-          usuarios.push({ nombre: form.nombre, email: form.email, role: form.role, organizationName: form.organizationName, organizationWebsite: form.organizationWebsite });
-        }
-        localStorage.setItem('usuarios', JSON.stringify(usuarios));
-      } catch(e) {}
-      
-      setSuccess(t('profile.updateSuccess'));
-      if (form.newPassword) {
-        setSuccess(t('profile.updatePasswordSuccess'));
+      if (updateError) {
+        setError(updateError.message || "Error al actualizar el perfil");
+        setLoading(false);
+        return;
       }
+      
+      // Si hay nueva contraseña, actualizarla
+      if (form.newPassword) {
+        const { error: passwordError } = await updatePassword(form.newPassword);
+        if (passwordError) {
+          setError(passwordError.message || "Error al actualizar la contraseña");
+          setLoading(false);
+          return;
+        }
+        setSuccess(t('profile.updatePasswordSuccess'));
+      } else {
+        setSuccess(t('profile.updateSuccess'));
+      }
+      
       // Limpiar campos de contraseña
       setForm(f => ({ ...f, password: "", newPassword: "" }));
     } catch (err) {
+      console.error('Error actualizando perfil:', err);
       setError("Error al actualizar el perfil");
     }
     setLoading(false);

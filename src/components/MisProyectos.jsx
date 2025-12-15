@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Calendar, MapPin, Users, TreePine, CheckCircle, Award } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { getCurrentUser, getRegistrosUsuario, cancelarRegistro, registrarAsistencia, getAsistenciasUsuario } from '@/lib/supabase-v2';
 
 export default function MisProyectos() {
   const { t } = useLanguage();
@@ -34,49 +35,96 @@ export default function MisProyectos() {
     };
   }, []);
 
-  const cargarRegistros = () => {
+  const cargarRegistros = async () => {
     try {
-      const authRaw = localStorage.getItem('authUser') || sessionStorage.getItem('authUser');
-      if (!authRaw) {
+      const user = await getCurrentUser();
+      if (!user) {
         setRegistros([]);
         return;
       }
-      const user = JSON.parse(authRaw);
 
-      const data = localStorage.getItem('eventRegistrations');
-      if (data) {
-        const parsed = JSON.parse(data);
-        // Filter only registrations for current user and confirmed
-        setRegistros(parsed.filter(r => r.estado === 'confirmado' && r.userEmail === user.email));
+      const userId = user.id || user.profile?.id;
+      if (!userId) {
+        console.log('No se pudo obtener userId');
+        setRegistros([]);
+        return;
       }
+
+      const { data, error } = await getRegistrosUsuario(userId);
+      if (error) {
+        console.error('Error al cargar registros:', error);
+        setRegistros([]);
+        return;
+      }
+      
+      // Formatear registros para el componente
+      const formattedRegistros = (data || []).map(r => ({
+        id: r.id,
+        estado: 'confirmado',
+        userEmail: user.email,
+        userName: r.nombre_completo,
+        evento: {
+          id: r.proyectos?.id || '',
+          nombre: r.proyectos?.nombre || '',
+          fecha: r.proyectos?.fecha_inicio?.split('T')[0] || '',
+          ubicacion: r.proyectos?.ubicacion || '',
+          lat: parseFloat(r.proyectos?.latitud) || 0,
+          lng: parseFloat(r.proyectos?.longitud) || 0,
+          estado: r.proyectos?.estado || 'Activo',
+          especies: r.proyectos?.especies || [],
+          arboles: r.proyectos?.meta_arboles || 0,
+          voluntarios: r.proyectos?.voluntarios_requeridos || 0,
+          descripcion: r.proyectos?.descripcion || ''
+        },
+        fechaRegistro: r.fecha_registro
+      }));
+      
+      setRegistros(formattedRegistros);
     } catch (error) {
       console.error('Error al cargar registros:', error);
+      setRegistros([]);
     }
   };
 
-  const cargarAsistencias = () => {
+  const cargarAsistencias = async () => {
     try {
-      const data = localStorage.getItem('asistencias');
-      if (data) {
-        setAsistencias(JSON.parse(data));
+      const user = await getCurrentUser();
+      if (!user) {
+        setAsistencias([]);
+        return;
       }
+
+      const userId = user.id || user.profile?.id;
+      if (!userId) {
+        setAsistencias([]);
+        return;
+      }
+
+      const { data, error } = await getAsistenciasUsuario(userId);
+      if (error) {
+        console.error('Error al cargar asistencias:', error);
+        setAsistencias([]);
+        return;
+      }
+      
+      // Formatear asistencias
+      const formattedAsistencias = (data || []).map(a => ({
+        projectId: a.proyecto_id,
+        userEmail: a.email_usuario,
+        userName: a.nombre_usuario,
+        arbolesPlantados: a.arboles_plantados,
+        fechaRegistro: a.fecha_asistencia
+      }));
+      
+      setAsistencias(formattedAsistencias);
     } catch (error) {
       console.error('Error al cargar asistencias:', error);
+      setAsistencias([]);
     }
   };
 
   const getAsistencia = (projectId) => {
-    const authUser = localStorage.getItem('authUser') || sessionStorage.getItem('authUser');
-    if (!authUser) return null;
-    
-    try {
-      const user = JSON.parse(authUser);
-      return asistencias.find(a => 
-        a.projectId === projectId && a.userEmail === user.email
-      );
-    } catch (e) {
-      return null;
-    }
+    return asistencias.find(a => a.projectId === projectId);
   };
 
   const handleCancelar = (registro) => {
@@ -84,44 +132,33 @@ export default function MisProyectos() {
     setShowCancelModal(true);
   };
 
-  const confirmarCancelacion = () => {
+  const confirmarCancelacion = async () => {
     try {
-      const data = localStorage.getItem('eventRegistrations');
-      if (data) {
-        const registros = JSON.parse(data);
-        console.log('🗑️ Cancelando registro:', selectedRegistro.id);
-        console.log('📋 Total registros antes:', registros.length);
-        
-        // Eliminar completamente el registro en lugar de marcarlo como cancelado
-        const updated = registros.filter(r => r.id !== selectedRegistro.id);
-        console.log('📋 Total registros después:', updated.length);
-        
-        localStorage.setItem('eventRegistrations', JSON.stringify(updated));
-        console.log('💾 Registro eliminado de localStorage');
-        
-        // También eliminar la asistencia si existe
-        const asistenciasData = localStorage.getItem('asistencias');
-        if (asistenciasData) {
-          const asistencias = JSON.parse(asistenciasData);
-          const authUser = localStorage.getItem('authUser') || sessionStorage.getItem('authUser');
-          if (authUser) {
-            const user = JSON.parse(authUser);
-            const asistenciasActualizadas = asistencias.filter(a => 
-              !(a.projectId === selectedRegistro.evento.id && a.userEmail === user.email)
-            );
-            localStorage.setItem('asistencias', JSON.stringify(asistenciasActualizadas));
-            console.log('🗑️ Asistencias eliminadas');
-            window.dispatchEvent(new Event('asistenciaChange'));
-          }
-        }
-        
-        window.dispatchEvent(new Event('registrationChange'));
-        console.log('📢 Eventos disparados: registrationChange y asistenciaChange');
-        setShowCancelModal(false);
-        setSelectedRegistro(null);
+      console.log('🗑️ Cancelando registro:', selectedRegistro.id);
+      
+      const { error } = await cancelarRegistro(selectedRegistro.id);
+      
+      if (error) {
+        console.error('Error al cancelar registro:', error);
+        alert('Error al cancelar el registro. Inténtalo de nuevo.');
+        return;
       }
+      
+      console.log('✅ Registro cancelado en Supabase');
+      
+      // Recargar registros
+      await cargarRegistros();
+      await cargarAsistencias();
+      
+      window.dispatchEvent(new Event('registrationChange'));
+      window.dispatchEvent(new Event('asistenciaChange'));
+      console.log('📢 Eventos disparados: registrationChange y asistenciaChange');
+      
+      setShowCancelModal(false);
+      setSelectedRegistro(null);
     } catch (error) {
       console.error('Error al cancelar:', error);
+      alert('Error al cancelar el registro. Inténtalo de nuevo.');
     }
   };
 
@@ -131,7 +168,7 @@ export default function MisProyectos() {
     setShowAsistenciaModal(true);
   };
 
-  const confirmarAsistencia = () => {
+  const confirmarAsistencia = async () => {
     if (!arbolesPlantados || Number(arbolesPlantados) <= 0) {
       alert(t('misProyectos.cantidadInvalida'));
       return;
@@ -145,36 +182,43 @@ export default function MisProyectos() {
     }
 
     try {
-      const authUser = localStorage.getItem('authUser') || sessionStorage.getItem('authUser');
-      if (!authUser) return;
-
-      const user = JSON.parse(authUser);
-      const asistenciasActuales = JSON.parse(localStorage.getItem('asistencias') || '[]');
-      
-      // Verificar si ya existe una asistencia
-      const existingIndex = asistenciasActuales.findIndex(a => 
-        a.projectId === selectedRegistro.evento.id && a.userEmail === user.email
-      );
-
-      if (existingIndex >= 0) {
-        // Actualizar asistencia existente
-        asistenciasActuales[existingIndex] = {
-          ...asistenciasActuales[existingIndex],
-          arbolesPlantados: Number.parseInt(arbolesPlantados, 10) || 0,
-          fechaRegistro: new Date().toISOString()
-        };
-      } else {
-        // Crear nueva asistencia
-        asistenciasActuales.push({
-          projectId: selectedRegistro.evento.id,
-          userEmail: user.email,
-          userName: user.name || 'Usuario',
-          arbolesPlantados: Number.parseInt(arbolesPlantados, 10) || 0,
-          fechaRegistro: new Date().toISOString()
-        });
+      const user = await getCurrentUser();
+      if (!user) {
+        alert('Debes iniciar sesión para registrar asistencia');
+        return;
       }
 
-      localStorage.setItem('asistencias', JSON.stringify(asistenciasActuales));
+      const userId = user.id || user.profile?.id;
+      const userName = user.profile?.nombre || user.user_metadata?.nombre || user.email;
+
+      console.log('📝 [MisProyectos] Registrando asistencia:', {
+        proyecto_id: selectedRegistro.evento.id,
+        usuario_id: userId,
+        user_email: user.email,
+        user_name: userName,
+        arboles_plantados: Number.parseInt(arbolesPlantados, 10)
+      });
+
+      const { error } = await registrarAsistencia({
+        proyecto_id: selectedRegistro.evento.id,
+        usuario_id: userId,
+        user_email: user.email,
+        user_name: userName,
+        arboles_plantados: Number.parseInt(arbolesPlantados, 10),
+        registration_id: selectedRegistro.id
+      });
+
+      if (error) {
+        console.error('❌ [MisProyectos] Error al registrar asistencia:', error);
+        alert(t('misProyectos.errorRegistrar'));
+        return;
+      }
+
+      console.log('✅ [MisProyectos] Asistencia registrada exitosamente');
+
+      // Recargar asistencias
+      await cargarAsistencias();
+      
       window.dispatchEvent(new Event('asistenciaChange'));
       window.dispatchEvent(new Event('storage'));
       

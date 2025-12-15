@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useState, useEffect } from "react";
+import { signOut } from "@/lib/supabase-v2";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -41,16 +42,23 @@ export function NavUser({ user }) {
     setMounted(true);
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     try {
-      localStorage.removeItem("authUser");
-    } catch (e) {}
-    // notificar cambios de auth a otros listeners en la página
-    try {
-      window.dispatchEvent(new Event("authChange"));
-    } catch (e) {}
-    // redirigir a /login
-    router.push("/login");
+      await signOut();
+      // Mostrar toast de despedida
+      try {
+        window.dispatchEvent(new CustomEvent('app:toast', {
+          detail: {
+            title: 'Sesión cerrada',
+            message: '¡Hasta pronto! Gracias por tu compromiso con el planeta.'
+          }
+        }));
+      } catch (e) {}
+      // Redirigir a login
+      router.push("/login");
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+    }
   };
 
   return (

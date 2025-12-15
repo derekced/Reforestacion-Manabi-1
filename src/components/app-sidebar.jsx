@@ -15,6 +15,7 @@ import {
 import { useLanguage } from "@/contexts/LanguageContext";
 import WidgetImpacto from "@/components/WidgetImpacto";
 import WidgetAdmin from "@/components/WidgetAdmin";
+import { getCurrentUser, supabase } from "@/lib/supabase-v2";
 
 import { NavUser } from "@/components/nav-user";
 import {
@@ -118,33 +119,99 @@ export function AppSidebar({ ...props }) {
   };
 
   React.useEffect(() => {
-    try {
-      const raw = localStorage.getItem("authUser");
-      if (raw) setUser(JSON.parse(raw));
-      else setUser(null);
-    } catch (e) {
-      // ignore
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-    
-    const onAuthChange = () => {
+    const loadUser = async () => {
       try {
-        const raw = localStorage.getItem("authUser");
-        if (raw) setUser(JSON.parse(raw));
-        else setUser(null);
+        // Verificar si supabase está configurado
+        if (!supabase) {
+          console.warn('Supabase no está configurado');
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
+
+        const userData = await getCurrentUser();
+        if (userData) {
+          // Intentar obtener rol del perfil, si no del metadata
+          const userRole = userData.profile?.role || userData.user_metadata?.role || 'volunteer';
+          
+          console.log('🔍 Usuario cargado:', {
+            email: userData.email,
+            role: userRole,
+            profile: userData.profile
+          });
+          
+          setUser({
+            name: userData.profile?.nombre || userData.user_metadata?.nombre || userData.email?.split('@')[0] || 'Usuario',
+            email: userData.email,
+            avatar: userData.profile?.avatar || userData.user_metadata?.avatar || '/avatars/user.jpg',
+            role: userRole
+          });
+        } else {
+          setUser(null);
+        }
       } catch (e) {
-        // ignore
+        console.error('Error loading user:', e);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
       }
     };
-    window.addEventListener("authChange", onAuthChange);
-    return () => window.removeEventListener("authChange", onAuthChange);
+    
+    loadUser();
+    
+    // Escuchar cambios de autenticación de Supabase solo si está configurado
+    if (!supabase) {
+      return;
+    }
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        // Recargar el usuario completo con su perfil
+        const userData = await getCurrentUser();
+        if (userData) {
+          const userRole = userData.profile?.role || userData.user_metadata?.role || 'volunteer';
+          
+          console.log('🔍 Auth change - Usuario:', {
+            email: userData.email,
+            role: userRole
+          });
+          
+          setUser({
+            name: userData.profile?.nombre || userData.user_metadata?.nombre || userData.email?.split('@')[0] || 'Usuario',
+            email: userData.email,
+            avatar: userData.profile?.avatar || userData.user_metadata?.avatar || '/avatars/user.jpg',
+            role: userRole
+          });
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+      }
+    });
+    
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
   }, []);
 
   // Filter and reorder nav items based on authentication and access
   const navItems = React.useMemo(() => {
-    if (isLoading) return [];
+    // Mientras carga, mostrar items básicos para evitar sidebar vacío
+    if (isLoading) {
+      return [
+        {
+          title: t('sidebar.inicio'),
+          url: "/",
+          icon: Home,
+          shortcut: "⌃H",
+        },
+        {
+          title: t('sidebar.proyectos'),
+          url: "/proyectos",
+          icon: Leaf,
+          shortcut: "⌃P",
+        },
+      ];
+    }
     
     const items = getNavItems();
     

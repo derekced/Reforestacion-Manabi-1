@@ -6,6 +6,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Edit, Trash2, X, Save } from 'lucide-react';
 import { cargarProyectos } from '@/lib/proyectosUtils';
+import { getCurrentUser } from '@/lib/supabase-v2';
 
 function OrganizerPage() {
   const { t } = useLanguage();
@@ -15,19 +16,29 @@ function OrganizerPage() {
   const [form, setForm] = useState({});
 
   useEffect(() => {
-    try {
-      const authRaw = localStorage.getItem('authUser') || sessionStorage.getItem('authUser');
-      if (!authRaw) return;
-      const u = JSON.parse(authRaw);
-      setUser(u);
+    const loadUser = async () => {
+      try {
+        const userData = await getCurrentUser();
+        if (!userData) return;
+        
+        const userRole = userData.profile?.role || userData.user_metadata?.role || 'volunteer';
+        const u = {
+          email: userData.email,
+          role: userRole,
+          nombre: userData.profile?.nombre || userData.user_metadata?.nombre || userData.email
+        };
+        setUser(u);
 
-      const all = cargarProyectos();
-      // Si es admin, mostrar todos; si es organizer, sólo los asignados
-      const visible = u.role === 'admin' ? all : all.filter(p => Array.isArray(p.organizers) && p.organizers.includes(u.email));
-      setProjects(visible);
-    } catch (e) {
-      console.error(e);
-    }
+        const all = cargarProyectos();
+        // Si es admin, mostrar todos; si es organizer, sólo los asignados
+        const visible = u.role === 'admin' ? all : all.filter(p => Array.isArray(p.organizers) && p.organizers.includes(u.email));
+        setProjects(visible);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    
+    loadUser();
   }, []);
 
   useEffect(() => {

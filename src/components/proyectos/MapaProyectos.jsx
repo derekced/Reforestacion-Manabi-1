@@ -6,53 +6,26 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useLanguage } from '@/contexts/LanguageContext';
 import FormularioUnirseEvento from './FormularioUnirseEvento';
-import { cargarProyectos, obtenerColoresEstado } from '@/lib/proyectosUtils';
+import { obtenerColoresEstado } from '@/lib/proyectosUtils';
+import { getProyectos, getCurrentUser, verificarRegistro } from '@/lib/supabase-v2';
 import { Calendar, Trees, Users, Leaf } from 'lucide-react';
 
-// Función para cargar proyectos desde localStorage
-const getProyectos = () => {
-  // Verificar si localStorage tiene la clave 'proyectos'
-  const savedData = localStorage.getItem('proyectos');
-  
-  if (savedData !== null) {
-    // Si existe, cargar lo que haya (puede ser un array vacío)
-    const proyectos = cargarProyectos();
-    console.log('📍 Cargando proyectos para el mapa:', proyectos.length, 'proyectos encontrados');
-    return proyectos;
-  }
-  
-  // Solo crear datos de ejemplo si nunca se ha inicializado localStorage
-  console.log('⚠️ Primera vez: usando datos de ejemplo en el mapa');
-  return [
-    {
-      id: '1',
-      nombre: "Reforestación Parque Nacional Machalilla",
-      ubicacion: "Puerto López",
-      lat: -1.5514,
-      lng: -80.8186,
-      arboles: 2500,
-      voluntarios: 150,
-      especies: ['Guayacán', 'Ceibo', 'Fernán Sánchez'],
-      fecha: '2025-02-15',
-      estado: 'Próximo',
-      descripcion: 'Recuperación de bosque seco tropical en el Parque Nacional Machalilla',
-      organizers: ['organizer1@example.com']
-    },
-    {
-      id: '2',
-      nombre: "Bosque Urbano Manta",
-      ubicacion: "Manta",
-      lat: -0.9537,
-      lng: -80.7089,
-      arboles: 1200,
-      voluntarios: 80,
-      especies: ['Neem', 'Almendro', 'Laurel'],
-      fecha: '2025-01-20',
-      estado: 'Activo',
-      descripcion: 'Creación de bosque urbano en la zona costera de Manta',
-      organizers: []
-    }
-  ];
+// Función auxiliar para formatear proyectos de Supabase para el mapa
+const formatProyectosParaMapa = (proyectos) => {
+  return proyectos.map(p => ({
+    id: p.id,
+    nombre: p.nombre,
+    ubicacion: p.ubicacion,
+    lat: parseFloat(p.lat) || 0,
+    lng: parseFloat(p.lng) || 0,
+    arboles: p.arboles || 0,
+    voluntarios: p.voluntarios_esperados || 0,
+    especies: p.especies || [],
+    fecha: p.fecha?.split('T')[0] || p.fecha || '',
+    estado: p.estado || 'Próximo',
+    descripcion: p.descripcion || '',
+    organizers: [] // Se puede obtener de proyecto_organizadores si se necesita
+  }));
 };
 
 // Iconos personalizados para los marcadores según estado
@@ -97,28 +70,37 @@ function MapaProyectos({ searchQuery = '' }) {
   const [showFormulario, setShowFormulario] = useState(false);
   const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
   
-  // Cargar proyectos desde localStorage
+  // Cargar proyectos desde Supabase
   useEffect(() => {
-    setEventosReforestacion(getProyectos());
-    
-    // Escuchar cambios en localStorage
-    const handleStorageChange = () => {
-      console.log('🗺️ Actualizando mapa de proyectos...');
-      setEventosReforestacion(getProyectos());
+    const loadProyectos = async () => {
+      try {
+        const { data, error } = await getProyectos();
+        if (error) {
+          console.error('Error cargando proyectos:', error);
+          setEventosReforestacion([]);
+          return;
+        }
+        const formattedProyectos = formatProyectosParaMapa(data || []);
+        console.log('📍 Cargando proyectos para el mapa:', formattedProyectos.length, 'proyectos encontrados');
+        setEventosReforestacion(formattedProyectos);
+      } catch (err) {
+        console.error('Error:', err);
+        setEventosReforestacion([]);
+      }
     };
     
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Recargar cuando la página está enfocada (para detectar cambios del admin)
-    window.addEventListener('focus', handleStorageChange);
+    loadProyectos();
     
     // Escuchar evento personalizado cuando se actualizan proyectos
-    window.addEventListener('projectsUpdated', handleStorageChange);
+    const handleProjectsUpdated = () => {
+      console.log('🗺️ Actualizando mapa de proyectos...');
+      loadProyectos();
+    };
+    
+    window.addEventListener('projectsUpdated', handleProjectsUpdated);
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('focus', handleStorageChange);
-      window.removeEventListener('projectsUpdated', handleStorageChange);
+      window.removeEventListener('projectsUpdated', handleProjectsUpdated);
     };
   }, []);
   
@@ -294,41 +276,56 @@ export default MapaProyectos;
 function JoinButton({ evento, onOpenForm }) {
   const { t } = useLanguage();
 
-  const handleJoin = () => {
-    // Verificar si el usuario está autenticado
-    const authRaw = localStorage.getItem('authUser') || sessionStorage.getItem('authUser');
-    if (!authRaw) {
-      // Redirigir al login si no está autenticado
-      globalThis.window.location.href = '/login';
-      return;
-    }
-    
-    // Verificar si el usuario es administrador
+  const handleJoin = async () => {
     try {
-      const user = JSON.parse(authRaw);
-      // Los administradores no pueden registrarse en proyectos
-      if (user.role === 'admin') {
-        alert(t('userMenu.adminCannotRegister'));
+      // Verificar si el usuario está autenticado con Supabase
+      const user = await getCurrentUser();
+      console.log('🔍 Usuario actual:', user);
+      
+      if (!user) {
+        // Redirigir al login si no está autenticado
+        alert('Debes iniciar sesión para registrarte en un proyecto');
+        globalThis.window.location.href = '/login';
         return;
       }
-      // Los organizadores pueden crear proyectos, pero no registrarse como voluntarios
-      if (user.role === 'organizer') {
-        alert(t('userMenu.organizerCannotRegister'));
+      
+      // Verificar si el usuario es administrador o organizador
+      const role = user.profile?.role || user.user_metadata?.role || 'volunteer';
+      console.log('👤 Rol del usuario:', role);
+      
+      if (role === 'admin') {
+        alert(t('userMenu.adminCannotRegister') || 'Los administradores no pueden registrarse en proyectos');
         return;
       }
-      // Verificar si ya está registrado
-      const regsRaw = localStorage.getItem('eventRegistrations') || '[]';
-      const regs = JSON.parse(regsRaw);
-      const exists = regs.find(r => r.evento && r.evento.id === evento.id && r.userEmail === user.email);
-      if (exists) {
-        alert(t('userMenu.alreadyRegistered'));
+      if (role === 'organizer') {
+        alert(t('userMenu.organizerCannotRegister') || 'Los organizadores no pueden registrarse en proyectos');
         return;
       }
+      
+      // Verificar si ya está registrado en este proyecto
+      const userId = user.id || user.profile?.id;
+      console.log('🆔 UserId para verificar:', userId);
+      console.log('📍 Proyecto ID:', evento.id);
+      
+      if (userId) {
+        const { data: registroExistente, error } = await verificarRegistro(userId, evento.id);
+        console.log('✅ Resultado verificación:', { data: registroExistente, error });
+        
+        if (registroExistente) {
+          console.log('⚠️ Ya registrado:', registroExistente);
+          alert(t('userMenu.alreadyRegistered') || 'Ya estás registrado en este proyecto');
+          return;
+        }
+      }
+      
+      console.log('✅ Abriendo formulario de registro');
+      // Abrir el formulario
+      onOpenForm();
     } catch (e) {
-      console.error('Error checking registration:', e);
+      console.error('❌ Error al verificar registro:', e);
+      // Permitir abrir el formulario de todos modos
+      onOpenForm();
     }
-    // Abrir el formulario
-    onOpenForm();
   };
 
   return (

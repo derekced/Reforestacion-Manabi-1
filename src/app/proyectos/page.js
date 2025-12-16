@@ -182,41 +182,44 @@ function ProyectosPage() {
           </div>
         </div>
 
-        {/* Barra de búsqueda de proyectos */}
-        <div className="mb-8">
-          <div className="max-w-3xl mx-auto">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t('common.search') || "Buscar proyectos por nombre, ubicación, descripción..."}
-                className="w-full pl-12 pr-4 py-4 border-2 border-gray-300 dark:border-gray-600 rounded-2xl 
-                         bg-white dark:bg-gray-800 text-base shadow-lg
-                         focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent
-                         text-gray-900 dark:text-white placeholder-gray-500
-                         transition-all duration-300"
-              />
-            </div>
-            {searchQuery && (
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 text-center">
-                {t('proyectos.buscando') || 'Buscando'}: <span className="font-semibold">{searchQuery}</span>
-              </p>
-            )}
-          </div>
-        </div>
-
         {/* Mapa con diseño mejorado */}
         <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
-          <div className="bg-linear-to-r from-green-600 to-emerald-600 dark:from-green-700 dark:to-emerald-700 px-6 py-4">
-            <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-              <MapPin className="w-7 h-7" strokeWidth={2.5} />
-              {t('proyectos.mapaInteractivo')}
-            </h2>
-            <p className="text-green-50 text-sm mt-1">
-              {t('proyectos.hacClicMarcadores')}
-            </p>
+          <div className="bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-700 dark:to-emerald-700 px-6 py-6">
+            <div className="flex flex-col gap-4">
+              <div>
+                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                  <MapPin className="w-7 h-7" strokeWidth={2.5} />
+                  {t('proyectos.mapaInteractivo')}
+                </h2>
+                <p className="text-green-50 text-sm mt-1">
+                  {t('proyectos.hacClicMarcadores')}
+                </p>
+              </div>
+              
+              {/* Barra de búsqueda dentro del header del mapa */}
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t('common.search') || "Buscar proyectos, ubicaciones..."}
+                  className="w-full pl-12 pr-4 py-3 border-2 border-white/20 rounded-xl 
+                           bg-white/95 dark:bg-gray-900/95 text-base shadow-md
+                           focus:outline-none focus:ring-2 focus:ring-white focus:border-white
+                           text-gray-900 dark:text-white placeholder-gray-500
+                           transition-all duration-300"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
           <div className="p-6">
             <Suspense fallback={<div>{t('proyectos.cargando')}</div>}>

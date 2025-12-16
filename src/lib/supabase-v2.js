@@ -577,77 +577,7 @@ export async function rechazarPeticion(peticionId, adminId, respuesta) {
   return { data, error };
 }
 
-// ============================================
-// FUNCIONES DE DONACIONES
-// ============================================
 
-export async function crearDonacion(donacionData) {
-  const { data, error } = await supabase
-    .from('donaciones')
-    .insert([donacionData])
-    .select()
-    .single();
-
-  return { data, error };
-}
-
-export async function getDonacionesUsuario(userId) {
-  const { data, error } = await supabase
-    .from('donaciones')
-    .select(`
-      *,
-      proyectos (nombre, ubicacion)
-    `)
-    .eq('usuario_id', userId)
-    .order('fecha_donacion', { ascending: false });
-
-  return { data, error };
-}
-
-export async function getDonacionesProyecto(projectId) {
-  const { data, error } = await supabase
-    .from('donaciones')
-    .select('*')
-    .eq('proyecto_id', projectId)
-    .eq('estado', 'completado')
-    .order('fecha_donacion', { ascending: false });
-
-  return { data, error };
-}
-
-export async function actualizarEstadoDonacion(donacionId, estado, transactionId = null) {
-  const updates = {
-    estado,
-    fecha_procesado: new Date().toISOString()
-  };
-  
-  if (transactionId) {
-    updates.transaction_id = transactionId;
-  }
-
-  const { data, error } = await supabase
-    .from('donaciones')
-    .update(updates)
-    .eq('id', donacionId)
-    .select()
-    .single();
-
-  return { data, error };
-}
-
-// ============================================
-// FUNCIONES DE MÉTODOS DE PAGO
-// ============================================
-
-export async function agregarMetodoPago(metodoPagoData) {
-  const { data, error } = await supabase
-    .from('metodos_pago')
-    .insert([metodoPagoData])
-    .select()
-    .single();
-
-  return { data, error };
-}
 
 export async function getMetodosPagoUsuario(userId) {
   const { data, error } = await supabase
@@ -671,17 +601,6 @@ export async function establecerMetodoPagoPredeterminado(userId, metodoPagoId) {
   const { data, error } = await supabase
     .from('metodos_pago')
     .update({ es_predeterminado: true })
-    .eq('id', metodoPagoId)
-    .select()
-    .single();
-
-  return { data, error };
-}
-
-export async function eliminarMetodoPago(metodoPagoId) {
-  const { data, error } = await supabase
-    .from('metodos_pago')
-    .update({ esta_activo: false })
     .eq('id', metodoPagoId)
     .select()
     .single();
@@ -1235,4 +1154,276 @@ export function getPublicUrl(bucket, path) {
     .getPublicUrl(path);
 
   return data.publicUrl;
+}
+
+// ============================================
+// FUNCIONES DE DONACIONES
+// ============================================
+
+/**
+ * Crear una nueva donación
+ */
+export async function crearDonacion(donacionData) {
+  if (!supabase) {
+    return { data: null, error: new Error('Supabase no está configurado') };
+  }
+
+  try {
+    const user = await getCurrentUser();
+    
+    const donacion = {
+      usuario_id: user?.id || null,
+      nombre_donante: donacionData.nombre_donante,
+      email_donante: donacionData.email_donante,
+      telefono_donante: donacionData.telefono_donante || null,
+      tipo_donacion: donacionData.tipo_donacion || 'unica',
+      monto: parseFloat(donacionData.monto),
+      moneda: donacionData.moneda || 'USD',
+      proyecto_id: donacionData.proyecto_id || null,
+      es_donacion_general: donacionData.proyecto_id ? false : true,
+      metodo_pago_id: null, // Por ahora null, se puede agregar tabla de métodos de pago
+      estado: 'completado', // En producción sería 'pendiente' hasta confirmar el pago
+      transaction_id: `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      es_anonimo: donacionData.es_anonimo || false,
+      mensaje: donacionData.mensaje || null,
+      recibo_enviado: false,
+      fecha_donacion: new Date().toISOString(),
+      fecha_procesado: new Date().toISOString()
+    };
+
+    const { data, error } = await supabase
+      .from('donaciones')
+      .insert([donacion])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    console.log('✅ Donación guardada:', data);
+    return { data, error: null };
+  } catch (error) {
+    console.error('❌ Error al crear donación:', error);
+    return { data: null, error };
+  }
+}
+
+/**
+ * Obtener donaciones del usuario actual
+ */
+export async function obtenerDonacionesUsuario() {
+  if (!supabase) {
+    return { data: null, error: new Error('Supabase no está configurado') };
+  }
+
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { data: [], error: null };
+    }
+
+    const { data, error } = await supabase
+      .from('donaciones')
+      .select(`
+        *,
+        proyectos (
+          id,
+          nombre,
+          ubicacion
+        )
+      `)
+      .eq('usuario_id', user.id)
+      .order('fecha_donacion', { ascending: false });
+
+    if (error) throw error;
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error al obtener donaciones:', error);
+    return { data: null, error };
+  }
+}
+
+/**
+ * Obtener todas las donaciones (solo para admin)
+ */
+export async function obtenerTodasDonaciones() {
+  if (!supabase) {
+    return { data: null, error: new Error('Supabase no está configurado') };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('donaciones')
+      .select(`
+        *,
+        perfiles (
+          nombre,
+          email
+        ),
+        proyectos (
+          id,
+          nombre,
+          ubicacion
+        )
+      `)
+      .order('fecha_donacion', { ascending: false });
+
+    if (error) throw error;
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error al obtener todas las donaciones:', error);
+    return { data: null, error };
+  }
+}
+
+/**
+ * Obtener estadísticas de donaciones
+ */
+export async function obtenerEstadisticasDonaciones(usuarioId = null) {
+  if (!supabase) {
+    return { data: null, error: new Error('Supabase no está configurado') };
+  }
+
+  try {
+    let query = supabase
+      .from('donaciones')
+      .select('monto, estado, fecha_donacion, tipo_donacion');
+
+    if (usuarioId) {
+      query = query.eq('usuario_id', usuarioId);
+    }
+
+    query = query.eq('estado', 'completado');
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    // Calcular estadísticas
+    const estadisticas = {
+      total_donaciones: data.length,
+      monto_total: data.reduce((sum, d) => sum + parseFloat(d.monto), 0),
+      monto_promedio: data.length > 0 ? data.reduce((sum, d) => sum + parseFloat(d.monto), 0) / data.length : 0,
+      por_tipo: {
+        unica: data.filter(d => d.tipo_donacion === 'unica').length,
+        mensual: data.filter(d => d.tipo_donacion === 'mensual').length,
+        anual: data.filter(d => d.tipo_donacion === 'anual').length
+      }
+    };
+
+    return { data: estadisticas, error: null };
+  } catch (error) {
+    console.error('Error al obtener estadísticas de donaciones:', error);
+    return { data: null, error };
+  }
+}
+
+// ============================================
+// FUNCIONES DE MÉTODOS DE PAGO
+// ============================================
+
+/**
+ * Crear un nuevo método de pago
+ */
+export async function crearMetodoPago(metodoPagoData) {
+  if (!supabase) {
+    return { data: null, error: new Error('Supabase no está configurado') };
+  }
+
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { data: null, error: new Error('Usuario no autenticado') };
+    }
+
+    const metodoPago = {
+      usuario_id: user.id,
+      tipo: metodoPagoData.tipo || 'tarjeta_credito',
+      ultimos_4_digitos: metodoPagoData.ultimos_4_digitos,
+      marca: metodoPagoData.marca,
+      nombre_titular: metodoPagoData.nombre_titular,
+      fecha_expiracion: metodoPagoData.fecha_expiracion,
+      es_predeterminado: metodoPagoData.es_predeterminado || false,
+      esta_activo: true
+    };
+
+    const { data, error } = await supabase
+      .from('metodos_pago')
+      .insert([metodoPago])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    console.log('✅ Método de pago guardado:', data);
+    return { data, error: null };
+  } catch (error) {
+    console.error('❌ Error al crear método de pago:', error);
+    return { data: null, error };
+  }
+}
+
+/**
+ * Obtener métodos de pago del usuario actual
+ */
+export async function obtenerMetodosPago() {
+  if (!supabase) {
+    return { data: null, error: new Error('Supabase no está configurado') };
+  }
+
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { data: [], error: null };
+    }
+
+    const { data, error } = await supabase
+      .from('metodos_pago')
+      .select('*')
+      .eq('usuario_id', user.id)
+      .eq('esta_activo', true)
+      .order('es_predeterminado', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error al obtener métodos de pago:', error);
+    return { data: null, error };
+  }
+}
+
+/**
+ * Eliminar un método de pago
+ */
+export async function eliminarMetodoPago(metodoPagoId) {
+  if (!supabase) {
+    return { data: null, error: new Error('Supabase no está configurado') };
+  }
+
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { data: null, error: new Error('Usuario no autenticado') };
+    }
+
+    // Soft delete - marcar como inactivo en lugar de eliminar
+    const { data, error } = await supabase
+      .from('metodos_pago')
+      .update({ esta_activo: false })
+      .eq('id', metodoPagoId)
+      .eq('usuario_id', user.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    console.log('✅ Método de pago eliminado:', data);
+    return { data, error: null };
+  } catch (error) {
+    console.error('❌ Error al eliminar método de pago:', error);
+    return { data: null, error };
+  }
 }

@@ -35,6 +35,7 @@ export function AppSidebar({ ...props }) {
   const [isLoading, setIsLoading] = React.useState(true);
   // `user` is null when no authenticated user exists
   const [user, setUser] = React.useState(null);
+  const [showShortcuts, setShowShortcuts] = React.useState(true);
 
   // Datos del sidebar con traducciones dinámicas
   const getNavItems = () => {
@@ -193,6 +194,31 @@ export function AppSidebar({ ...props }) {
     };
   }, []);
 
+  // Escuchar cambios en preferencias de accesibilidad
+  React.useEffect(() => {
+    // Cargar preferencia de atajos
+    const saved = localStorage.getItem("accessibilitySettings");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      setShowShortcuts(parsed.showShortcuts !== false);
+    }
+
+    // Escuchar cambios en la configuración
+    const handleAccessibilityChange = () => {
+      const saved = localStorage.getItem("accessibilitySettings");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setShowShortcuts(parsed.showShortcuts !== false);
+      }
+    };
+
+    window.addEventListener("accessibility-changed", handleAccessibilityChange);
+    
+    return () => {
+      window.removeEventListener("accessibility-changed", handleAccessibilityChange);
+    };
+  }, []);
+
   // Filter and reorder nav items based on authentication and access
   const navItems = React.useMemo(() => {
     // Mientras carga, mostrar items básicos para evitar sidebar vacío
@@ -255,7 +281,7 @@ export function AppSidebar({ ...props }) {
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
                       </div>
-                      {item.shortcut && (
+                      {item.shortcut && showShortcuts && (
                         <span className="text-xs opacity-50 group-data-[collapsible=icon]:hidden">
                           {item.shortcut}
                         </span>

@@ -1,12 +1,26 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import mainImage from "../assets/logo-reforestacion.png";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import ModalDonacion from "@/components/ModalDonacion";
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Leaf, ArrowRight, TreeDeciduous, Cloud } from 'lucide-react';
+import { getCurrentUser } from '@/lib/supabase-v2';
+import { Leaf, ArrowRight, TreeDeciduous, Cloud, Heart } from 'lucide-react';
 
 function Home() {
   const { t } = useLanguage();
+  const [modalDonacionAbierto, setModalDonacionAbierto] = useState(false);
+  const [userRole, setUserRole] = useState(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const user = await getCurrentUser();
+      if (user?.profile?.role) {
+        setUserRole(user.profile.role);
+      }
+    };
+    loadUser();
+  }, []);
 
   return (
     <div className="w-full bg-white dark:bg-gray-950">
@@ -91,6 +105,20 @@ function Home() {
                   </span>
                   <div className="absolute inset-0 bg-forest-dark transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
                 </a>
+                
+                {/* Botón de donación - solo para voluntarios y organizadores */}
+                {userRole && userRole !== 'admin' && (
+                  <button
+                    onClick={() => setModalDonacionAbierto(true)}
+                    className="group relative bg-gradient-to-r from-pink-500 to-rose-600 text-white px-8 py-4 rounded-full font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl overflow-hidden"
+                  >
+                    <span className="relative z-10 flex items-center justify-center gap-2">
+                      <Heart className="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" />
+                      {t('home.donar')}
+                    </span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-rose-600 to-pink-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
+                  </button>
+                )}
               </div>
 
               {/* Social Proof */}
@@ -165,6 +193,12 @@ function Home() {
           </div>
         </div>
       </section>
+      
+      {/* Modal de donación */}
+      <ModalDonacion 
+        isOpen={modalDonacionAbierto} 
+        onClose={() => setModalDonacionAbierto(false)} 
+      />
     </div>
   );
 }
